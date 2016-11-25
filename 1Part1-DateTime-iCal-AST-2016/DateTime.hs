@@ -15,16 +15,16 @@ data Date = Date { year  :: Year
                  , day   :: Day }
     deriving (Eq, Ord)
 
-newtype Year  = Year  { unYear :: Int }  deriving (Eq, Ord)
+newtype Year  = Year  { unYear  :: Int } deriving (Eq, Ord)
 newtype Month = Month { unMonth :: Int } deriving (Eq, Ord)
-newtype Day   = Day   { unDay :: Int }   deriving (Eq, Ord)
+newtype Day   = Day   { unDay   :: Int } deriving (Eq, Ord)
 
 data Time = Time { hour   :: Hour
                  , minute :: Minute
                  , second :: Second }
     deriving (Eq, Ord)
 
-newtype Hour   = Hour   { unHour :: Int }   deriving (Eq, Ord)
+newtype Hour   = Hour   { unHour   :: Int } deriving (Eq, Ord)
 newtype Minute = Minute { unMinute :: Int } deriving (Eq, Ord)
 newtype Second = Second { unSecond :: Int } deriving (Eq, Ord)
 
@@ -52,6 +52,18 @@ main = interact (printOutput . processCheck . processInput)
 -- Exercise 1
 parseDateTime :: Parser Char DateTime
 parseDateTime = undefined
+
+parseDate = undefined
+parseYear = undefined
+parseMonth = undefined
+parseDay = undefined    
+
+parseTime = undefined
+parseHour = undefined
+parseMinute = undefined
+parseSecond = undefined
+
+parseInt = undefined
 
 
 -- Exercise 2
