@@ -1,4 +1,5 @@
 import ParseLib.Abstract
+import Data.Char
 
 
 -- Starting Framework
@@ -51,19 +52,47 @@ main = interact (printOutput . processCheck . processInput)
 
 -- Exercise 1
 parseDateTime :: Parser Char DateTime
-parseDateTime = undefined
+parseDateTime =  (\w x y z -> DateTime w y z) <$> parseDate <*> dateSep <*> parseTime <*> parseUTC
 
-parseDate = undefined
-parseYear = undefined
-parseMonth = undefined
-parseDay = undefined    
+parseDate :: Parser Char Date
+parseDate = Date <$> parseYear <*> parseMonth <*> parseDay
 
-parseTime = undefined
-parseHour = undefined
-parseMinute = undefined
-parseSecond = undefined
+parseYear :: Parser Char Year
+parseYear = Year <$> parse4Digits
 
-parseInt = undefined
+parseMonth :: Parser Char Month
+parseMonth = Month <$> parseDigits
+
+parseDay :: Parser Char Day
+parseDay = Day <$> parseDigits
+
+parseTime :: Parser Char Time
+parseTime = Time <$> parseHour <*> parseMinute <*> parseSecond
+
+parseUTC :: Parser Char Bool
+parseUTC = (=='Z') <$> symbol 'Z' <|> const False <$> epsilon
+
+parseHour :: Parser Char Hour
+parseHour = Hour <$> parseDigits
+
+parseMinute :: Parser Char Minute
+parseMinute = Minute <$> parseDigits
+
+parseSecond :: Parser Char Second
+parseSecond = Second <$> parseDigits
+
+parse4Digits :: Parser Char Int
+parse4Digits = (\w x y z -> 1000*w + 100*x + 10*y + z) <$> parseDigit <*> parseDigit <*> parseDigit <*> parseDigit
+
+parseDigits :: Parser Char Int
+parseDigits = (\x y -> 10*x + y) <$> parseDigit <*> parseDigit
+
+parseDigit :: Parser Char Int
+parseDigit = f <$> satisfy isDigit
+             where f c = ord c - ord '0'
+
+dateSep :: Parser Char Char             
+dateSep = symbol 'T'
 
 
 -- Exercise 2
