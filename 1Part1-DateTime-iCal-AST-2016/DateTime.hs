@@ -114,7 +114,40 @@ parsePrint s = fmap printDateTime $ run parseDateTime s
 
 -- Exercise 5
 checkDateTime :: DateTime -> Bool
-checkDateTime = undefined
+checkDateTime (DateTime {date = d, time = t}) = checkDate d && checkTime t
+
+checkDate :: Date -> Bool
+checkDate date@(Date {year = y, month = m, day = d})= checkYear y && checkMonth m && checkDay date
+
+checkTime :: Time -> Bool
+checkTime (Time {hour = h, minute = m, second = s}) = checkHour h && checkMinute m && checkSecond s
+
+checkYear :: Year -> Bool
+checkYear (Year {unYear = y}) = -1 < y && y < 10000
+
+checkMonth :: Month -> Bool
+checkMonth (Month {unMonth = m}) = 0<m && m < 13
+
+checkDay :: Date -> Bool
+checkDay (Date {year = y, month = mt@(Month {unMonth = m}), day = dy@(Day{unDay = d})}) | leapYear y && m == 2 = 0 < d && d < 30
+                                                                                        | m == 2 = 0 < d && d < 29
+                                                                                        | m == 1 || m == 3 || m == 5 || m == 7 || m == 8 || m == 10 || m == 12 = 0 < d && d < 32
+                                                                                        | otherwise = 0 < d && d < 31
+
+checkHour :: Hour -> Bool
+checkHour (Hour {unHour = h}) = -1 < h && h < 24
+
+checkMinute :: Minute -> Bool
+checkMinute (Minute {unMinute = m}) = -1 < m && m < 60
+
+checkSecond :: Second -> Bool
+checkSecond (Second {unSecond = s}) = -1 < s && s < 60
+
+leapYear :: Year -> Bool
+leapYear (Year {unYear = y}) |(y `mod` 400) == 0 = True
+                             | y `mod` 100 == 0 = False
+                             | y `mod` 4 == 0 = True
+                             | otherwise = False
 
 
 
