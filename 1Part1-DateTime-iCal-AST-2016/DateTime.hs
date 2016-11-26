@@ -1,5 +1,6 @@
 import ParseLib.Abstract
 import Data.Char
+import Data.Maybe
 
 
 -- Starting Framework
@@ -9,32 +10,32 @@ import Data.Char
 data DateTime = DateTime { date :: Date
                          , time :: Time
                          , utc  :: Bool }
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
 data Date = Date { year  :: Year
                  , month :: Month
                  , day   :: Day }
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
-newtype Year  = Year  { unYear  :: Int } deriving (Eq, Ord)
-newtype Month = Month { unMonth :: Int } deriving (Eq, Ord)
-newtype Day   = Day   { unDay   :: Int } deriving (Eq, Ord)
+newtype Year  = Year  { unYear  :: Int } deriving (Eq, Ord, Show)
+newtype Month = Month { unMonth :: Int } deriving (Eq, Ord, Show)
+newtype Day   = Day   { unDay   :: Int } deriving (Eq, Ord, Show)
 
 data Time = Time { hour   :: Hour
                  , minute :: Minute
                  , second :: Second }
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
-newtype Hour   = Hour   { unHour   :: Int } deriving (Eq, Ord)
-newtype Minute = Minute { unMinute :: Int } deriving (Eq, Ord)
-newtype Second = Second { unSecond :: Int } deriving (Eq, Ord)
+newtype Hour   = Hour   { unHour   :: Int } deriving (Eq, Ord, Show)
+newtype Minute = Minute { unMinute :: Int } deriving (Eq, Ord, Show)
+newtype Second = Second { unSecond :: Int } deriving (Eq, Ord, Show)
 
 
 -- | The main interaction function. Used for IO, do not edit.
 data Result = SyntaxError | Invalid DateTime | Valid DateTime deriving (Eq, Ord)
 
-instance Show DateTime where
-    show = printDateTime
+--instance Show DateTime where
+--    show = printDateTime
 
 instance Show Result where
     show SyntaxError = "date/time with wrong syntax"
@@ -47,7 +48,6 @@ main = interact (printOutput . processCheck . processInput)
         processInput = map (run parseDateTime) . lines
         processCheck = map (maybe SyntaxError (\x -> if checkDateTime x then Valid x else Invalid x))
         printOutput  = unlines . map show
-
 
 
 -- Exercise 1
@@ -97,19 +97,29 @@ dateSep = symbol 'T'
 
 -- Exercise 2
 run :: Parser a b -> [a] -> Maybe b
-run = undefined
+run parser xs = listToMaybe (map fst (filter op (parse parser xs)))
+              where op (_, ys) = null ys
 
 
 -- Exercise 3
 printDateTime :: DateTime -> String
-printDateTime = undefined
+printDateTime (DateTime date time utc) = printDate date ++ "T" ++ printTime time ++ op utc
+        where op True = "Z"
+              op False = "" 
 
+printDate :: Date -> String
+printDate (Date year month day) = ((addZeros 4).show.unYear) year ++ ((addZeros 2).show.unMonth) month ++ ((addZeros 2).show.unDay) day
+
+printTime :: Time -> String
+printTime (Time hour minute second) = ((addZeros 2).show.unHour) hour ++ ((addZeros 2).show.unMinute) minute ++ ((addZeros 2).show.unSecond) second
+
+addZeros :: Int -> String -> String
+addZeros n s | n > length s = addZeros n ('0':s)
+             | otherwise = s
 
 
 -- Exercise 4
 parsePrint s = fmap printDateTime $ run parseDateTime s
-
-
 
 
 -- Exercise 5
@@ -148,7 +158,6 @@ leapYear (Year {unYear = y}) |(y `mod` 400) == 0 = True
                              | y `mod` 100 == 0 = False
                              | y `mod` 4 == 0 = True
                              | otherwise = False
-
 
 
 -- Exercise 6
