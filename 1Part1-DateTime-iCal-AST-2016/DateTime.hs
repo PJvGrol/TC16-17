@@ -154,11 +154,39 @@ checkSecond :: Second -> Bool
 checkSecond (Second {unSecond = s}) = -1 < s && s < 60
 
 leapYear :: Year -> Bool
-leapYear (Year {unYear = y}) |(y `mod` 400) == 0 = True
+leapYear (Year {unYear = y}) | y `mod` 400 == 0 = True
                              | y `mod` 100 == 0 = False
-                             | y `mod` 4 == 0 = True
-                             | otherwise = False
+                             | y `mod` 4   == 0 = True
+                             | otherwise        = False
 
 
 -- Exercise 6
+data Event = Event { dtstamp     :: DTStamp,
+                     uid         :: UID,
+                     dtstart     :: DTStart,
+                     dtend       :: DTEnd,
+                     description :: Maybe Description,
+                     summary     :: Maybe Summary,
+                     location    :: Maybe Location }
+                     
+data DTStamp = DTStamp DateTime
 
+data UID = UID String
+
+data DTStart = DTStart DateTime
+
+data DTEnd = DTEnd DateTime
+
+data Description = Description String
+
+data Summary = Summary String
+
+data Location = Location String
+
+data Calendar = Calendar { prodid :: ProdID, 
+                           version :: Version,
+                           events :: [Event] }
+                           
+data ProdID = ProdID String
+
+data Version = Version String -- ???
