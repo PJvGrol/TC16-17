@@ -86,10 +86,10 @@ parseSecond :: Parser Char Second
 parseSecond = Second <$> parseDigits
 
 parse4Digits :: Parser Char Int
-parse4Digits = (\w x y z -> 1000*w + 100*x + 10*y + z) <$> parseDigit <*> parseDigit <*> parseDigit <*> parseDigit
+parse4Digits = (\w x y z -> 1000 * w + 100 * x + 10 * y + z) <$> parseDigit <*> parseDigit <*> parseDigit <*> parseDigit
 
 parseDigits :: Parser Char Int
-parseDigits = (\x y -> 10*x + y) <$> parseDigit <*> parseDigit
+parseDigits = (\x y -> 10 * x + y) <$> parseDigit <*> parseDigit
 
 parseDigit :: Parser Char Int
 parseDigit = f <$> satisfy isDigit
@@ -100,12 +100,16 @@ dateSep = symbol 'T'
 
 
 -- Exercise 2
+-- We filter the 
 run :: Parser a b -> [a] -> Maybe b
-run parser xs = listToMaybe (map fst (filter op (parse parser xs)))
-              where op (_, ys) = null ys
+--run parser xs = (listToMaybe.map fst) (filter (null.snd) (parse parser xs))
+run parser xs = (listToMaybe.map fst) (dropWhile (null.snd) (parse parser xs))
 
 
 -- Exercise 3
+-- Printing is pretty straight forward. The only thing worth mentioning is addZeros. This function ensures that years, 
+-- months, days, hours, minutes and seconds have an equal amount digits by adding 0's to the front, since the first month
+-- must be represented as "01"
 printDateTime :: DateTime -> String
 printDateTime (DateTime dt t utc) = printDate dt ++ "T" ++ printTime t ++ op utc
         where op True  = "Z"
