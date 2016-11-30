@@ -100,7 +100,7 @@ dateSep = symbol 'T'
 
 
 -- Exercise 2
--- We delete elements until 
+-- We delete elements until the second argument of the tuple is empty. listToMaybe takes the first element and converts it to a Maybe.
 run :: Parser a b -> [a] -> Maybe b
 run parser xs = (listToMaybe.map fst) (dropWhile (not.null.snd) (parse parser xs))
 
