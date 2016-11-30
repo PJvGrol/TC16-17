@@ -52,7 +52,7 @@ main = interact (printOutput . processCheck . processInput)
 
 -- Exercise 1
 parseDateTime :: Parser Char DateTime
-parseDateTime =  (\w x y z -> DateTime w y z) <$> parseDate <*> dateSep <*> parseTime <*> parseUTC
+parseDateTime =  (\w _ y z -> DateTime w y z) <$> parseDate <*> dateSep <*> parseTime <*> parseUTC
 
 parseDate :: Parser Char Date
 parseDate = Date <$> parseYear <*> parseMonth <*> parseDay
@@ -103,15 +103,15 @@ run parser xs = listToMaybe (map fst (filter op (parse parser xs)))
 
 -- Exercise 3
 printDateTime :: DateTime -> String
-printDateTime (DateTime date time utc) = printDate date ++ "T" ++ printTime time ++ op utc
-        where op True = "Z"
+printDateTime (DateTime dt t utc) = printDate dt ++ "T" ++ printTime t ++ op utc
+        where op True  = "Z"
               op False = "" 
 
 printDate :: Date -> String
-printDate (Date year month day) = (addZeros 4.show.unYear) year ++ (addZeros 2.show.unMonth) month ++ (addZeros 2.show.unDay) day
+printDate (Date y m d) = (addZeros 4.show.unYear) y ++ (addZeros 2.show.unMonth) m ++ (addZeros 2.show.unDay) d
 
 printTime :: Time -> String
-printTime (Time hour minute second) = (addZeros 2.show.unHour) hour ++ (addZeros 2.show.unMinute) minute ++ (addZeros 2.show.unSecond) second
+printTime (Time h m s) = (addZeros 2.show.unHour) h ++ (addZeros 2.show.unMinute) m ++ (addZeros 2.show.unSecond) s
 
 addZeros :: Int -> String -> String
 addZeros n s | n > length s = addZeros n ('0':s)
@@ -124,40 +124,40 @@ parsePrint s = fmap printDateTime $ run parseDateTime s
 
 -- Exercise 5
 checkDateTime :: DateTime -> Bool
-checkDateTime (DateTime {date = d, time = t}) = checkDate d && checkTime t
+checkDateTime (DateTime dt t _) = checkDate dt && checkTime t
 
 checkDate :: Date -> Bool
-checkDate date@(Date {year = y, month = m, day = d})= checkYear y && checkMonth m && checkDay date
+checkDate date@(Date y m _)= checkYear y && checkMonth m && checkDay date
 
 checkTime :: Time -> Bool
-checkTime (Time {hour = h, minute = m, second = s}) = checkHour h && checkMinute m && checkSecond s
+checkTime (Time h m s) = checkHour h && checkMinute m && checkSecond s
 
 checkYear :: Year -> Bool
-checkYear (Year {unYear = y}) = -1 < y && y < 10000
+checkYear (Year y) = -1 < y && y < 10000
 
 checkMonth :: Month -> Bool
-checkMonth (Month {unMonth = m}) = 0<m && m < 13
+checkMonth (Month m) = 0<m && m < 13
 
 checkDay :: Date -> Bool
-checkDay (Date {year = y, month = mt@(Month {unMonth = m}), day = dy@(Day{unDay = d})}) | leapYear y && m == 2 = 0 < d && d < 30
-                                                                                        | m == 2 = 0 < d && d < 29
-                                                                                        | m == 1 || m == 3 || m == 5 || m == 7 || m == 8 || m == 10 || m == 12 = 0 < d && d < 32
-                                                                                        | otherwise = 0 < d && d < 31
+checkDay (Date y (Month m) (Day d)) | leapYear y && m == 2 = 0 < d && d < 30
+                                    | m == 2 = 0 < d && d < 29
+                                    | m == 4 || m == 6 || m == 9 || m == 11 = 0 < d && d < 31
+                                    | otherwise = 0 < d && d < 32
 
 checkHour :: Hour -> Bool
-checkHour (Hour {unHour = h}) = -1 < h && h < 24
+checkHour (Hour h) = -1 < h && h < 24
 
 checkMinute :: Minute -> Bool
-checkMinute (Minute {unMinute = m}) = -1 < m && m < 60
+checkMinute (Minute m) = -1 < m && m < 60
 
 checkSecond :: Second -> Bool
-checkSecond (Second {unSecond = s}) = -1 < s && s < 60
+checkSecond (Second s) = -1 < s && s < 60
 
 leapYear :: Year -> Bool
-leapYear (Year {unYear = y}) | y `mod` 400 == 0 = True
-                             | y `mod` 100 == 0 = False
-                             | y `mod` 4   == 0 = True
-                             | otherwise        = False
+leapYear (Year y) | y `mod` 400 == 0 = True
+                  | y `mod` 100 == 0 = False
+                  | y `mod` 4   == 0 = True
+                  | otherwise        = False
 
 
 -- Exercise 6
@@ -188,9 +188,9 @@ data Summary = Summary String
 data Location = Location String
 
 -- Since a Calendar has to contain both prodid and version, it seemed redundant to create a datatype calprop which is either a prodid or a version.
-data Calendar = Calendar { prodid :: ProdID, 
+data Calendar = Calendar { prodid  :: ProdID,
                            version :: Version,
-                           events :: [Event] }
+                           events  :: [Event] }
                            
 data ProdID = ProdID String
 
