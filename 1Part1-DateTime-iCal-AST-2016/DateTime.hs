@@ -108,10 +108,10 @@ printDateTime (DateTime date time utc) = printDate date ++ "T" ++ printTime time
               op False = "" 
 
 printDate :: Date -> String
-printDate (Date year month day) = ((addZeros 4).show.unYear) year ++ ((addZeros 2).show.unMonth) month ++ ((addZeros 2).show.unDay) day
+printDate (Date year month day) = (addZeros 4.show.unYear) year ++ (addZeros 2.show.unMonth) month ++ (addZeros 2.show.unDay) day
 
 printTime :: Time -> String
-printTime (Time hour minute second) = ((addZeros 2).show.unHour) hour ++ ((addZeros 2).show.unMinute) minute ++ ((addZeros 2).show.unSecond) second
+printTime (Time hour minute second) = (addZeros 2.show.unHour) hour ++ (addZeros 2.show.unMinute) minute ++ (addZeros 2.show.unSecond) second
 
 addZeros :: Int -> String -> String
 addZeros n s | n > length s = addZeros n ('0':s)
