@@ -10,32 +10,32 @@ import Data.Maybe
 data DateTime = DateTime { date :: Date
                          , time :: Time
                          , utc  :: Bool }
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
 
 data Date = Date { year  :: Year
                  , month :: Month
                  , day   :: Day }
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
 
-newtype Year  = Year  { unYear  :: Int } deriving (Eq, Ord, Show)
-newtype Month = Month { unMonth :: Int } deriving (Eq, Ord, Show)
-newtype Day   = Day   { unDay   :: Int } deriving (Eq, Ord, Show)
+newtype Year  = Year  { unYear  :: Int } deriving (Eq, Ord)
+newtype Month = Month { unMonth :: Int } deriving (Eq, Ord)
+newtype Day   = Day   { unDay   :: Int } deriving (Eq, Ord)
 
 data Time = Time { hour   :: Hour
                  , minute :: Minute
                  , second :: Second }
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
 
-newtype Hour   = Hour   { unHour   :: Int } deriving (Eq, Ord, Show)
-newtype Minute = Minute { unMinute :: Int } deriving (Eq, Ord, Show)
-newtype Second = Second { unSecond :: Int } deriving (Eq, Ord, Show)
+newtype Hour   = Hour   { unHour   :: Int } deriving (Eq, Ord)
+newtype Minute = Minute { unMinute :: Int } deriving (Eq, Ord)
+newtype Second = Second { unSecond :: Int } deriving (Eq, Ord)
 
 
 -- | The main interaction function. Used for IO, do not edit.
 data Result = SyntaxError | Invalid DateTime | Valid DateTime deriving (Eq, Ord)
 
---instance Show DateTime where
---    show = printDateTime
+instance Show DateTime where
+    show = printDateTime
 
 instance Show Result where
     show SyntaxError = "date/time with wrong syntax"
@@ -189,4 +189,4 @@ data Calendar = Calendar { prodid :: ProdID,
                            
 data ProdID = ProdID String
 
-data Version = Version String -- ???
+data Version = Version
