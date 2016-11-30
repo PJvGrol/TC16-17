@@ -100,9 +100,9 @@ dateSep = symbol 'T'
 
 
 -- Exercise 2
--- We filter the 
+-- We delete elements until 
 run :: Parser a b -> [a] -> Maybe b
-run parser xs = (listToMaybe.map fst) (dropWhile (null.snd) (parse parser xs))
+run parser xs = (listToMaybe.map fst) (dropWhile (not.null.snd) (parse parser xs))
 
 
 -- Exercise 3
