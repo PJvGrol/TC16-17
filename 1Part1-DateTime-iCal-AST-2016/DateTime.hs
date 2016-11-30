@@ -161,6 +161,10 @@ leapYear (Year {unYear = y}) | y `mod` 400 == 0 = True
 
 
 -- Exercise 6
+
+-- All of the following datatypes have, in the abstract syntax, certain constants added to them. These have not been included in the datatype, but methods to create output must handle these constants.
+-- An event has to have exactly one occurrence each of dtstamp, uid, dtstart and dtend. It may also have exactly one occurrence each of description, summary and location.
+-- Although the properties in an event may appear in any order, they may be set in a specific order in the datatype. The method to handle the input must also handle the random ordering.
 data Event = Event { dtstamp     :: DTStamp,
                      uid         :: UID,
                      dtstart     :: DTStart,
@@ -183,10 +187,12 @@ data Summary = Summary String
 
 data Location = Location String
 
+-- Since a Calendar has to contain both prodid and version, it seemed redundant to create a datatype calprop which is either a prodid or a version.
 data Calendar = Calendar { prodid :: ProdID, 
                            version :: Version,
                            events :: [Event] }
                            
 data ProdID = ProdID String
 
+-- The Version is a constant. We've added this as a datatype for completeness.
 data Version = Version
