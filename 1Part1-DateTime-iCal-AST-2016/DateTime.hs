@@ -51,6 +51,10 @@ main = interact (printOutput . processCheck . processInput)
 
 
 -- Exercise 1
+-- Parsing has been delegated to the lowest possible level, i.e. parseDateTime combines the parsers for Date, the seperator, Time and UTC.
+-- parseDate combines the parsers for Year, Month and Day etc.
+-- We'd prefer to not have a seperate parse4Digits and parseDigits, but rather a parseNDigits. This was, however, not possible.
+-- The code for parseDigit has been copied from the dictaat.
 parseDateTime :: Parser Char DateTime
 parseDateTime =  (\w _ y z -> DateTime w y z) <$> parseDate <*> dateSep <*> parseTime <*> parseUTC
 
@@ -123,6 +127,9 @@ parsePrint s = fmap printDateTime $ run parseDateTime s
 
 
 -- Exercise 5
+-- We delegate the checks to the lowest level, which means that it only needs the information about the thing we are checking.
+-- checkDay is an unique case, since the amount of days in a month differs, and the amount of days in february differs based on whether it is a leapyear or not.
+-- The checks on minute and second are the same, but for clearness they have not been combined into one general check (something like checkSixty).
 checkDateTime :: DateTime -> Bool
 checkDateTime (DateTime dt t _) = checkDate dt && checkTime t
 
@@ -136,10 +143,10 @@ checkYear :: Year -> Bool
 checkYear (Year y) = -1 < y && y < 10000
 
 checkMonth :: Month -> Bool
-checkMonth (Month m) = 0<m && m < 13
+checkMonth (Month m) = 0 < m && m < 13
 
 checkDay :: Date -> Bool
-checkDay (Date y (Month m) (Day d)) | leapYear y && m == 2 = 0 < d && d < 30
+checkDay (Date y (Month m) (Day d)) | m == 2 && leapYear y = 0 < d && d < 30
                                     | m == 2 = 0 < d && d < 29
                                     | m == 4 || m == 6 || m == 9 || m == 11 = 0 < d && d < 31
                                     | otherwise = 0 < d && d < 32
