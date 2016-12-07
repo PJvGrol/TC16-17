@@ -1,7 +1,10 @@
 module ICalendar where
 
 import ParseLib.Abstract
+import Data.Char
 import Data.Maybe
+import System.IO
+import Text.PrettyPrint
 
 
 data DateTime = DateTime { date :: Date
@@ -68,9 +71,9 @@ parseCalendar :: Parser Token Calendar
 parseCalendar = undefined
 
 parseCalProp :: Parser Token String
-parseCalProp = ParseProdID <|> parseVersion
+parseCalProp = undefined --ParseProdID <|> parseVersion
 
-parseVersion :: Parser
+--parseVersion :: Parser
 
 -- DateTime parser from Part 1
 
@@ -119,7 +122,9 @@ dateSep = symbol 'T'
 
 -- Exercise 2
 readCalendar :: FilePath -> IO (Maybe Calendar)
-readCalendar = undefined
+readCalendar file = do f <- openFile file ReadMode
+                       c <- hGetContents f
+                       return (recognizeCalendar c)
 
 
 -- Exercise 3
