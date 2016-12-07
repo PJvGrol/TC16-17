@@ -67,7 +67,10 @@ scanCalendar = undefined
 parseCalendar :: Parser Token Calendar
 parseCalendar = undefined
 
+parseCalProp :: Parser Token String
+parseCalProp = ParseProdID <|> parseVersion
 
+parseVersion :: Parser
 
 -- Exercise 2
 readCalendar :: FilePath -> IO (Maybe Calendar)
