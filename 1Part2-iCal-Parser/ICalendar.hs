@@ -154,10 +154,17 @@ countEvents :: Calendar -> Int
 countEvents = length . events
 
 findEvents :: DateTime -> Calendar -> [VEvent]
-findEvents = undefined
+findEvents dt (Calendar _ e) = filter (inBetween dt) e
+
+inBetween :: DateTime -> VEvent -> Bool
+inBetween dt (VEvent _ _ start end _ _ _) = totalDiff start dt >= 0 && totalDiff dt end > 0
 
 checkOverlapping :: Calendar -> Bool
-checkOverlapping = undefined
+checkOverlapping (Calendar _ e) = overlap e e > length e
+
+overlap :: [VEvent] -> [VEvent] -> Int
+overlap [] xs = 0
+overlap ((VEvent _ _ start _ _ _ _):xs) ys = length (filter id (map (inBetween start) ys)) + overlap xs ys
 
 timeSpent :: String -> Calendar -> Int
 timeSpent s (Calendar _ e) = foldr (+) 0 (map eventTime (filter (filterEvent s) e))
@@ -166,41 +173,41 @@ filterEvent :: String -> VEvent -> Bool
 filterEvent s (VEvent _ _ _ _ _ summ _) = s == fromJust summ
 
 eventTime :: VEvent -> Int
-eventTime (VEvent _ _ start end _ _ _) = totalDifference start end
+eventTime (VEvent _ _ start end _ _ _) = totalDiff start end
 
-totalDifference :: DateTime -> DateTime -> Int
-totalDifference (DateTime bd bt _) (DateTime ed et _) = dateDifference bd ed + timeDifference bt et
+totalDiff :: DateTime -> DateTime -> Int
+totalDiff (DateTime bd bt _) (DateTime ed et _) = dateDiff bd ed + timeDiff bt et
 
-dateDifference :: Date -> Date -> Int
-dateDifference bd@(Date y1 m1 d1) ed@(Date y2 m2 d2) = yearDifference y1 y2 + monthDifference  bd ed + dayDifference d1 d2
+dateDiff :: Date -> Date -> Int
+dateDiff bd@(Date y1 m1 d1) ed@(Date y2 m2 d2) = yearDiff y1 y2 + monthDiff  bd ed + dayDiff d1 d2
 
-yearDifference :: Year -> Year -> Int
-yearDifference y1@(Year y) y2 | y1 == y2    = 0
-                              | leapYear y1 = 366 * 24 * 3600 + yearDifference (Year (y+1)) y2
-                              | otherwise   = 365 * 24 * 3600 + yearDifference (Year (y+1)) y2
+yearDiff :: Year -> Year -> Int
+yearDiff y1@(Year y) y2 | y1 == y2    = 0
+                              | leapYear y1 = 366 * 24 * 3600 + yearDiff (Year (y+1)) y2
+                              | otherwise   = 365 * 24 * 3600 + yearDiff (Year (y+1)) y2
 
-monthDifference :: Date -> Date -> Int
-monthDifference d@(Date y1 (Month m1) d1) (Date y2 (Month m2) d2) | m1 == m2 = 0
-                                                                  | m1 < m2  = days d + monthDifference (Date y1 (Month (m1 + 1)) d1) (Date y2 (Month m2) d2)
-                                                                  | m1 > m2  = -days d + monthDifference (Date y1 (Month (m1 - 1)) d1) (Date y2 (Month m2) d2)
+monthDiff :: Date -> Date -> Int
+monthDiff d@(Date y1 (Month m1) d1) (Date y2 (Month m2) d2) | m1 == m2 = 0
+                                                                  | m1 < m2  = days d + monthDiff (Date y1 (Month (m1 + 1)) d1) (Date y2 (Month m2) d2)
+                                                                  | m1 > m2  = -days d + monthDiff (Date y1 (Month (m1 - 1)) d1) (Date y2 (Month m2) d2)
 
-dayDifference :: Day -> Day -> Int
-dayDifference (Day d1) (Day d2) | d1 == d2 = 0
-                                | d1 < d2  = 24 * 3600 + dayDifference (Day (d1 + 1)) (Day d2)
-                                | d1 > d2  = -(24 * 3600) + dayDifference (Day (d1 - 1)) (Day d2)
+dayDiff :: Day -> Day -> Int
+dayDiff (Day d1) (Day d2) | d1 == d2 = 0
+                                | d1 < d2  = 24 * 3600 + dayDiff (Day (d1 + 1)) (Day d2)
+                                | d1 > d2  = -(24 * 3600) + dayDiff (Day (d1 - 1)) (Day d2)
 
-timeDifference :: Time -> Time -> Int
-timeDifference (Time h1 m1 (Second s1)) (Time h2 m2 (Second s2)) = hourDifference h1 h2 + minuteDifference m1 m2 + (s2 - s1)
+timeDiff :: Time -> Time -> Int
+timeDiff (Time h1 m1 (Second s1)) (Time h2 m2 (Second s2)) = hourDiff h1 h2 + minuteDiff m1 m2 + (s2 - s1)
                                 
-hourDifference :: Hour -> Hour -> Int
-hourDifference (Hour h1) (Hour h2) | h1 == h2 = 0
-                                   | h1 < h2  = 3600 + hourDifference (Hour (h1 + 1)) (Hour h2)
-                                   | h1 > h2  = -3600 + hourDifference (Hour (h1 - 1)) (Hour h2)
+hourDiff :: Hour -> Hour -> Int
+hourDiff (Hour h1) (Hour h2) | h1 == h2 = 0
+                                   | h1 < h2  = 3600 + hourDiff (Hour (h1 + 1)) (Hour h2)
+                                   | h1 > h2  = -3600 + hourDiff (Hour (h1 - 1)) (Hour h2)
 
-minuteDifference :: Minute -> Minute -> Int
-minuteDifference (Minute m1) (Minute m2) | m1 == m2 = 0
-                                         | m1 < m2  = 60 + minuteDifference (Minute (m1 + 1)) (Minute m2)
-                                         | m1 > m2  = -60 + minuteDifference (Minute (m1 - 1)) (Minute m2)                                         
+minuteDiff :: Minute -> Minute -> Int
+minuteDiff (Minute m1) (Minute m2) | m1 == m2 = 0
+                                         | m1 < m2  = 60 + minuteDiff (Minute (m1 + 1)) (Minute m2)
+                                         | m1 > m2  = -60 + minuteDiff (Minute (m1 - 1)) (Minute m2)                                         
                                    
 leapYear :: Year -> Bool
 leapYear (Year y) | y `mod` 400 == 0 = True
