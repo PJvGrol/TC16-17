@@ -44,7 +44,9 @@ data VEvent = VEvent { dtStamp     :: DateTime
                      , location    :: Maybe String }
     deriving Eq
 
-
+instance Show DateTime where
+    show = printDateTime
+    
 run :: Parser a b -> [a] -> Maybe b
 run p s = listToMaybe [p | (p, []) <- parse p s]
 
@@ -123,6 +125,7 @@ dateSep = symbol 'T'
 -- Exercise 2
 readCalendar :: FilePath -> IO (Maybe Calendar)
 readCalendar file = do f <- openFile file ReadMode
+                       hSetNewlineMode f noNewlineTranslation
                        c <- hGetContents f
                        return (recognizeCalendar c)
 
@@ -143,10 +146,40 @@ data VEvent = VEvent { dtStamp     :: DateTime
     deriving Eq-}
 
 printCalendar :: Calendar -> String
-printCalendar (Calendar p (e:es)) = undefined
+printCalendar (Calendar p e) = "BEGIN:VCALENDAR\r\nPRODID:" ++ p ++ "\r\nVERSION:2.0\r\n" ++ concat (map printEvent e) ++ "END:VCALENDAR\r\n"
 
 printEvent :: VEvent -> String
-printEvent (VEvent stamp uid start end des sum loc) = undefined
+printEvent (VEvent stamp uid start end des sum loc) = "BEGIN:VEVENT\r\nDTSTAMP:" ++ show stamp ++
+                                                      "\r\nUID:" ++ uid ++ 
+                                                      "\r\nDTSTART:" ++ show start ++ 
+                                                      "\r\nDTEND:" ++ show end ++ "\r\n" ++
+                                                      showdes ++
+                                                      showsum ++
+                                                      showloc ++
+                                                      "END:VEVENT\r\n"
+                                                      where
+                                                      showdes | isNothing des = ""
+                                                              | otherwise = "DESCRIPTION:" ++ fromJust des ++ "\r\n"
+                                                      showsum | isNothing sum = ""
+                                                              | otherwise = "SUMMARY:" ++ fromJust sum ++ "\r\n"
+                                                      showloc | isNothing loc = ""
+                                                              | otherwise = "LOCATION:" ++ fromJust loc ++ "\r\n"
+                                                      
+
+printDateTime :: DateTime -> String
+printDateTime (DateTime dt t utc) = printDate dt ++ "T" ++ printTime t ++ op utc
+        where op True  = "Z"
+              op False = "" 
+
+printDate :: Date -> String
+printDate (Date y m d) = (addZeros 4.show.unYear) y ++ (addZeros 2.show.unMonth) m ++ (addZeros 2.show.unDay) d
+
+printTime :: Time -> String
+printTime (Time h m s) = (addZeros 2.show.unHour) h ++ (addZeros 2.show.unMinute) m ++ (addZeros 2.show.unSecond) s
+
+addZeros :: Int -> String -> String
+addZeros n s | n > length s = addZeros n ('0':s)
+             | otherwise = s
 
 
 -- Exercise 4
