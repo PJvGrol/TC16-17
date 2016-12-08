@@ -4,7 +4,7 @@ import Data.Maybe
 
 
 -- Starting Framework
-
+-- DateTime (Date (Year 1) (Month 3) (Day 2)) (Time (Hour 23) (Minute 59) (Second 59)) True
 
 -- | "Target" datatype for the DateTime parser, i.e, the parser should produce elements of this type.
 data DateTime = DateTime { date :: Date
