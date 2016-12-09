@@ -84,7 +84,7 @@ data Token = Token
     deriving (Eq, Ord, Show)
 
 parseCalendar :: Parser Char Calendar
-parseCalendar = Calendar <$ token "BEGIN:VCALENDAR\n" <*> parseCalProp <*> many parseEvent <* token "END:VCALENDAR\n" <* eof
+parseCalendar = Calendar <$ token "BEGIN:VCALENDAR\r\n" <*> parseCalProp <*> many parseEvent <* token "END:VCALENDAR\r\n" <* eof
 
 {-toString :: String -> String
 toString a = show (parse parseCalendar a)-}
@@ -93,13 +93,13 @@ parseCalProp :: Parser Char String
 parseCalProp = parseVersion *> parseProdId <|> parseProdId <* parseVersion
 
 parseVersion :: Parser Char ()
-parseVersion = const () <$> token "VERSION:2.0\n"
+parseVersion = const () <$> token "VERSION:2.0\r\n"
 
 parseProdId :: Parser Char String
 parseProdId = token "PRODID:" *> parseToEnd
 
 parseEvent :: Parser Char VEvent
-parseEvent = (token "BEGIN:VEVENT\n" *> greedy parseProp <* token "END:VEVENT\n") >>= (f.sort)
+parseEvent = (token "BEGIN:VEVENT\r\n" *> greedy parseProp <* token "END:VEVENT\r\n") >>= (f.sort)
 
 f :: [Props] -> Parser Char VEvent
 f xs =  case g xs of
@@ -138,11 +138,11 @@ parseProp = DtStamp     <$ token "DTSTAMP:"     <*> parseDTToEnd  <|>
             Description <$ token "DESCRIPTION:" <*> parseToEnd    <|>
             Summary     <$ token "SUMMARY:"     <*> parseToEnd    <|>
             Location    <$ token "LOCATION:"    <*> parseToEnd
-            where parseDTToEnd = parseDateTime <* symbol '\n'
+            where parseDTToEnd = parseDateTime <* token "\r\n"
             
 
 parseToEnd :: Parser Char String
-parseToEnd = greedy (satisfy (/='\n')) <* symbol '\n'
+parseToEnd = greedy (satisfy (/='\r')) <* token "\r\n"
 
 -- DateTime parser from Part 1
 
@@ -251,7 +251,7 @@ addZeros :: Int -> String -> String
 addZeros n s | n > length s = addZeros n ('0':s)
              | otherwise = s
 
-
+-- Calendar "asfd" [(VEvent (DateTime (Date (Year 1) (Month 3) (Day 2)) (Time (Hour 23) (Minute 59) (Second 59)) True) "asd" (DateTime (Date (Year 1) (Month 3) (Day 2)) (Time (Hour 22) (Minute 59) (Second 59)) True) (DateTime (Date (Year 1) (Month 3) (Day 3)) (Time (Hour 0) (Minute 0) (Second 59)) True) Nothing Nothing Nothing),(VEvent (DateTime (Date (Year 1) (Month 3) (Day 2)) (Time (Hour 23) (Minute 59) (Second 59)) True) "asd" (DateTime (Date (Year 1) (Month 3) (Day 3)) (Time (Hour 0) (Minute 0) (Second 0)) True) (DateTime (Date (Year 1) (Month 3) (Day 3)) (Time (Hour 22) (Minute 59) (Second 59)) True) Nothing Nothing Nothing)]
 -- Exercise 4
 countEvents :: Calendar -> Int
 countEvents = length . events
@@ -260,7 +260,7 @@ findEvents :: DateTime -> Calendar -> [VEvent]
 findEvents dt (Calendar _ e) = filter (inBetween dt) e
 
 inBetween :: DateTime -> VEvent -> Bool
-inBetween dt VEvent{dtStart,dtEnd} = totalDiff dtStart dt >= 0 && totalDiff dt dtEnd > 0
+inBetween dt VEvent{dtStart,dtEnd} = totalDiff dtStart dt >= 0 && totalDiff dt dtEnd >= 0
 
 checkOverlapping :: Calendar -> Bool
 checkOverlapping (Calendar _ e) = overlap e e > length e
@@ -288,31 +288,31 @@ dateDiff bd@(Date y1 _ d1) ed@(Date y2 _ d2) = yearDiff y1 y2 + monthDiff  bd ed
 
 yearDiff :: Year -> Year -> Int
 yearDiff y1@(Year y) y2 | y1 == y2    = 0
-                              | leapYear y1 = 366 * 24 * 3600 + yearDiff (Year (y+1)) y2
-                              | otherwise   = 365 * 24 * 3600 + yearDiff (Year (y+1)) y2
+                        | leapYear y1 = 366 * 24 * 3600 + yearDiff (Year (y+1)) y2
+                        | otherwise   = 365 * 24 * 3600 + yearDiff (Year (y+1)) y2
 
 monthDiff :: Date -> Date -> Int
-monthDiff d@(Date y1 (Month m1) d1) (Date y2 (Month m2) d2) | m1 == m2 = 0
-                                                                  | m1 < m2  = days d + monthDiff (Date y1 (Month (m1 + 1)) d1) (Date y2 (Month m2) d2)
-                                                                  | m1 > m2  = -days d + monthDiff (Date y1 (Month (m1 - 1)) d1) (Date y2 (Month m2) d2)
+monthDiff d@(Date y1 (Month m1) d1) (Date y2 (Month m2) d2) | m1 == m2  = 0
+                                                            | m1 < m2   =  days d + monthDiff (Date y1 (Month (m1 + 1)) d1) (Date y2 (Month m2) d2)
+                                                            | otherwise = -days d + monthDiff (Date y1 (Month (m1 - 1)) d1) (Date y2 (Month m2) d2)
 
 dayDiff :: Day -> Day -> Int
-dayDiff (Day d1) (Day d2) | d1 == d2 = 0
-                                | d1 < d2  = 24 * 3600 + dayDiff (Day (d1 + 1)) (Day d2)
-                                | d1 > d2  = -(24 * 3600) + dayDiff (Day (d1 - 1)) (Day d2)
+dayDiff (Day d1) (Day d2) | d1 == d2  = 0
+                          | d1 < d2   = 24 * 3600 + dayDiff (Day (d1 + 1)) (Day d2)
+                          | otherwise = -(24 * 3600) + dayDiff (Day (d1 - 1)) (Day d2)
 
 timeDiff :: Time -> Time -> Int
 timeDiff (Time h1 m1 (Second s1)) (Time h2 m2 (Second s2)) = hourDiff h1 h2 + minuteDiff m1 m2 + (s2 - s1)
                                 
 hourDiff :: Hour -> Hour -> Int
-hourDiff (Hour h1) (Hour h2) | h1 == h2 = 0
-                             | h1 < h2  = 3600 + hourDiff (Hour (h1 + 1)) (Hour h2)
-                             | h1 > h2  = -3600 + hourDiff (Hour (h1 - 1)) (Hour h2)
+hourDiff (Hour h1) (Hour h2) | h1 == h2  = 0
+                             | h1 < h2   = 3600 + hourDiff (Hour (h1 + 1)) (Hour h2)
+                             | otherwise = -3600 + hourDiff (Hour (h1 - 1)) (Hour h2)
 
 minuteDiff :: Minute -> Minute -> Int
-minuteDiff (Minute m1) (Minute m2) | m1 == m2 = 0
-                                         | m1 < m2  = 60 + minuteDiff (Minute (m1 + 1)) (Minute m2)
-                                         | m1 > m2  = -60 + minuteDiff (Minute (m1 - 1)) (Minute m2)                                         
+minuteDiff (Minute m1) (Minute m2) | m1 == m2  = 0
+                                   | m1 < m2   = 60 + minuteDiff (Minute (m1 + 1)) (Minute m2)
+                                   | otherwise = -60 + minuteDiff (Minute (m1 - 1)) (Minute m2)                                         
                                    
 leapYear :: Year -> Bool
 leapYear (Year y) | y `mod` 400 == 0 = True
@@ -331,21 +331,21 @@ ppMonth :: Year -> Month -> Calendar -> PP.Doc
 ppMonth y m c = PP.text (ppMonth2 (unMonth m) (eventsMonth y m c))
 
 ppMonth2 :: Int -> [VEvent] -> String
-ppMonth2 m xs = intercalate ppLine (op2 (map (ppDayLine m) [7*k-6 | k <-[1..5]]) (op3 m 1 xs))
+ppMonth2 m xs = intercalate ppLine (op2 (map (ppDayLine m) [7 * k - 6 | k <- [1..5]]) (op3 m 1 xs))
 
 op3 :: Int -> Int -> [VEvent] -> [String]
-op3 m d xs | d>m = []
+op3 m d xs | d > m = []
            | otherwise = ppEvent d (sortOnWeek m (toTuples xs) !! (d `div` 7)) : op3 m (d + 7) xs 
 
 op2 :: [String] -> [String] -> [String] 
 op2 [] [] = []
-op2 (x:xs) (y:ys) = (x++y):op2 xs ys
+op2 (x:xs) (y:ys) = (x ++ y) : op2 xs ys
 
 ppLine :: String
 ppLine = tail (concat (replicate 7 ("+" ++ replicate 14 '-')))
 
 ppDayLine :: Int -> Int -> String
-ppDayLine m n | m < n     = ' ' : tail (concat (replicate (n+6-(min (n+6) m)) ppEmptyDay))
+ppDayLine m n | m < n     = ' ' : tail (concat (replicate y ppEmptyDay))
               | otherwise = tail (concatMap ppDay [n .. x]) ++ concat (replicate y ppEmptyDay)
                        where
                         x = min (n+6) m
