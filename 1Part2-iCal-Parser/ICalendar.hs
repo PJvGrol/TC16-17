@@ -66,25 +66,25 @@ run :: Parser a b -> [a] -> Maybe b
 run p s = listToMaybe [p | (p, []) <- parse p s]
 
 recognizeCalendar :: String -> Maybe Calendar
-recognizeCalendar s = run parseCalendar s
+recognizeCalendar = run parseCalendar
 
 
 -- "Main" block, DO NOT EDIT.
 -- If you want to run the parser + pretty-printing, rename this module (first line) to "Main".
 -- DO NOT forget to rename the module back to "ICalendar" before submitting to DomJudge.
-{-main = do
+main = do
     res <- readCalendar "examples/rooster_infotc.ics"
     putStrLn . PP.render $ maybe (PP.text "Calendar parsing error") (ppMonth (Year 2012) (Month 11)) res
--}
 
-main = interact (\x -> ((printCalendar.fst) ((parse parseCalendar x) !! 0)))
+
+--main = interact (\x -> (printCalendar.fst) ((parse parseCalendar x) !! 0))
 
 -- Exercise 1
 data Token = Token
     deriving (Eq, Ord, Show)
 
 parseCalendar :: Parser Char Calendar
-parseCalendar = (\r xs -> (Calendar r xs)) <$ token "BEGIN:VCALENDAR\n" <*> parseCalProp <*> many parseEvent <* token "END:VCALENDAR\n" <* eof
+parseCalendar = Calendar <$ token "BEGIN:VCALENDAR\n" <*> parseCalProp <*> many parseEvent <* token "END:VCALENDAR\n" <* eof
 
 {-toString :: String -> String
 toString a = show (parse parseCalendar a)-}
@@ -103,32 +103,32 @@ parseEvent = (token "BEGIN:VEVENT\n" *> greedy parseProp <* token "END:VEVENT\n"
 
 f :: [Props] -> Parser Char VEvent
 f xs =  case g xs of
-            Nothing -> empty
-            Just x -> case h x (drop 4 xs) of 
-                        Nothing -> empty
-                        Just y  -> succeed y
+            (Nothing, _) -> empty
+            (Just x, ys) -> case h x ys of 
+                                Nothing -> empty
+                                Just y  -> succeed y
 
-g :: [Props] -> Maybe VEvent
-g ((DtStamp dm):(Uid u):(DtStart ds):(DtEnd de):xs) = Just (VEvent dm u ds de Nothing Nothing Nothing)
-g _ = Nothing
+g :: [Props] -> (Maybe VEvent, [Props])
+g (DtStamp dm : Uid u : DtStart ds : DtEnd de : xs) = (Just (VEvent dm u ds de Nothing Nothing Nothing), xs)
+g _ = (Nothing, [])
 
 h :: VEvent -> [Props] -> Maybe VEvent
-h v@(VEvent a b c d e f g) xs = case xs of
-                                   [] -> Just v
-                                   (Description de:xss) -> h1 (VEvent a b c d (Just de) f g) xss
-                                   _ -> h1 v xs
+h v xs = case xs of
+              []                   -> Just v
+              (Description de:xss) -> h1 v{description = Just de} xss
+              _                    -> h1 v xs
 
 h1 :: VEvent -> [Props] -> Maybe VEvent
-h1 v@(VEvent a b c d e f g) xs = case xs of
-                                   [] -> Just v
-                                   (Summary su:xss) -> h2 (VEvent a b c d e (Just su) g) xss
-                                   _ -> h2 v xs
+h1 v xs = case xs of
+               []               -> Just v
+               (Summary su:xss) -> h2 v{summary = Just su} xss
+               _                -> h2 v xs
                                    
 h2 :: VEvent -> [Props] -> Maybe VEvent
-h2 v@(VEvent a b c d e f g) xs = case xs of
-                                   [] -> Just v
-                                   (Location lo:[]) -> Just (VEvent a b c d e f (Just lo))
-                                   _ -> Nothing
+h2 v xs = case xs of
+               []            -> Just v
+               [Location lo] -> Just v{location = Just lo}
+               _             -> Nothing
 
 parseProp :: Parser Char Props
 parseProp = DtStamp     <$ token "DTSTAMP:"     <*> parseDTToEnd  <|>
@@ -213,7 +213,7 @@ data VEvent = VEvent { dtStamp     :: DateTime
     deriving Eq-}
 
 printCalendar :: Calendar -> String
-printCalendar (Calendar p e) = "BEGIN:VCALENDAR\r\nPRODID:" ++ p ++ "\r\nVERSION:2.0\r\n" ++ concat (map printEvent e) ++ "END:VCALENDAR\r\n"
+printCalendar (Calendar p e) = "BEGIN:VCALENDAR\r\nPRODID:" ++ p ++ "\r\nVERSION:2.0\r\n" ++ concatMap printEvent e ++ "END:VCALENDAR\r\n"
 
 printEvent :: VEvent -> String
 printEvent (VEvent stamp uid start end des sum loc) = "BEGIN:VEVENT\r\nDTSTAMP:" ++ printDateTime stamp ++
@@ -266,14 +266,16 @@ checkOverlapping :: Calendar -> Bool
 checkOverlapping (Calendar _ e) = overlap e e > length e
 
 overlap :: [VEvent] -> [VEvent] -> Int
-overlap [] xs = 0
+overlap [] _ = 0
 overlap (VEvent{dtStart}:xs) ys = length (filter id (map (inBetween dtStart) ys)) + overlap xs ys
 
 timeSpent :: String -> Calendar -> Int
-timeSpent s (Calendar _ e) = (foldr (+) 0 (map eventTime (filter (filterEvent s) e))) `div` 60
+timeSpent s (Calendar _ e) = sum (map eventTime (filter (filterEvent s) e)) `div` 60
 
 filterEvent :: String -> VEvent -> Bool
-filterEvent s VEvent{summary} = s == fromJust summary
+filterEvent s VEvent{summary} = case summary of
+                                     Nothing -> False
+                                     Just x  -> x == s
 
 eventTime :: VEvent -> Int
 eventTime VEvent{dtStart,dtEnd} = totalDiff dtStart dtEnd
@@ -282,7 +284,7 @@ totalDiff :: DateTime -> DateTime -> Int
 totalDiff (DateTime bd bt _) (DateTime ed et _) = dateDiff bd ed + timeDiff bt et
 
 dateDiff :: Date -> Date -> Int
-dateDiff bd@(Date y1 m1 d1) ed@(Date y2 m2 d2) = yearDiff y1 y2 + monthDiff  bd ed + dayDiff d1 d2
+dateDiff bd@(Date y1 _ d1) ed@(Date y2 _ d2) = yearDiff y1 y2 + monthDiff  bd ed + dayDiff d1 d2
 
 yearDiff :: Year -> Year -> Int
 yearDiff y1@(Year y) y2 | y1 == y2    = 0
@@ -304,8 +306,8 @@ timeDiff (Time h1 m1 (Second s1)) (Time h2 m2 (Second s2)) = hourDiff h1 h2 + mi
                                 
 hourDiff :: Hour -> Hour -> Int
 hourDiff (Hour h1) (Hour h2) | h1 == h2 = 0
-                                   | h1 < h2  = 3600 + hourDiff (Hour (h1 + 1)) (Hour h2)
-                                   | h1 > h2  = -3600 + hourDiff (Hour (h1 - 1)) (Hour h2)
+                             | h1 < h2  = 3600 + hourDiff (Hour (h1 + 1)) (Hour h2)
+                             | h1 > h2  = -3600 + hourDiff (Hour (h1 - 1)) (Hour h2)
 
 minuteDiff :: Minute -> Minute -> Int
 minuteDiff (Minute m1) (Minute m2) | m1 == m2 = 0
@@ -319,7 +321,7 @@ leapYear (Year y) | y `mod` 400 == 0 = True
                   | otherwise        = False
 
 days :: Date -> Int
-days (Date y (Month m) d) | m == 2 && leapYear y = 29
+days (Date y (Month m) _) | m == 2 && leapYear y = 29
                           | m == 2 = 28
                           | m == 4 || m == 6 || m == 9 || m == 11 = 30
                           | otherwise = 31
@@ -344,7 +346,7 @@ ppLine = tail (concat (replicate 7 ("+" ++ replicate 14 '-')))
 
 ppDayLine :: Int -> Int -> String
 ppDayLine m n | m < n     = ' ' : tail (concat (replicate (n+6-(min (n+6) m)) ppEmptyDay))
-              | otherwise = tail (concat (map ppDay [n..x])) ++ concat (replicate y ppEmptyDay)
+              | otherwise = tail (concatMap ppDay [n .. x]) ++ concat (replicate y ppEmptyDay)
                        where
                         x = min (n+6) m
                         y = n + 6 - x
@@ -353,34 +355,27 @@ ppDay :: Int -> String
 ppDay n = "| " ++ show n ++ replicate (14 - length (show n)) ' '
 
 ppEmptyDay :: String
-ppEmptyDay = "|" ++ replicate (14) ' '
-
-ppEmptyCalendar :: Int -> PP.Doc
-ppEmptyCalendar n = undefined
-                  where 
-                  x = n `div` 7
-                  f y = y * 7 + 1
-                  d = map f [0..x]
-                  dayLines = map (ppDayLine n) d
-                  lineBreaks = replicate (x - 1) ppLine
+ppEmptyDay = "|" ++ replicate 14 ' '
                   
 ppEvent :: Int -> [(Int, String)] -> String
-ppEvent n es | n `mod` 7 == 1 && es == [] = ""
+ppEvent n es | n `mod` 7 == 1 && null es = ""
              | otherwise = z ++ d ++ ppEvent m y
            where
            x = findIndex (\x -> n == fst x) es
-           e | x /= Nothing = es !! (fromJust x)
-             | otherwise = (0,"")
+           e = case x of
+                    Nothing -> (0,"")
+                    Just i  -> es !! i
            d | e == (0,"") && n `mod` 7 == 1 = "              "
              | e == (0,"") = "|              "
              | n `mod` 7 == 1 = " " ++ snd e ++ " "
              | otherwise = "| " ++ snd e ++ " "
-           y | x /= Nothing = delete e es  
-             | otherwise = es
+           y = case x of
+                    Nothing -> delete e es
+                    Just _  -> es
            z | n `mod` 7 == 1 = "\r\n"
              | otherwise = ""
            m | n < 7 = (n `mod` 7) + 1
-             | n `mod` 7 == 0 && es == [] = n `mod` 7 + ((n `div` 7) * 7) + 1
+             | n `mod` 7 == 0 && null es = n `mod` 7 + ((n `div` 7) * 7) + 1
              | n `mod` 7 == 0 && fst (head es) <= n = n - 7 + 1
              | otherwise = n `mod` 7 + ((n `div` 7) * 7) + 1
 
@@ -390,28 +385,23 @@ sortOnWeek n xs = map (op n xs) [7*k-6 | k <- [1..5]]
 
 op :: Int -> [(Int, String)] -> Int -> [(Int, String)]
 op n xs week = filter f xs
-        where f (a,b) = a >= week && a < week + 7 && a<=n
+        where f (a,_) = a >= week && a < week + 7 && a <= n
 
 toTuples :: [VEvent] -> [(Int, String)]
-toTuples [] = []
-toTuples (x:xs) = toTuple x ++ toTuples xs
+toTuples = foldr ((++) . toTuple) []
 
 toTuple :: VEvent -> [(Int, String)]
 toTuple v | (unDay.day.date.dtEnd) v == (unDay.day.date.dtStart) v = [((unDay.day.date.dtStart) v,timeToString ((time.dtStart) v) ((time.dtEnd) v))]
-          | otherwise                        = ((unDay.day.date.dtStart) v, timeToString ((time.dtStart) v) (Time (Hour 23) (Minute 59) (Second 0))) : toTuple (toBeginOfNextDay v) --(((unDay.day.date.dtStart) v)`mod` 7,v {dtEnd=})
+          | otherwise                        = ((unDay.day.date.dtStart) v, timeToString ((time.dtStart) v) (Time (Hour 23) (Minute 59) (Second 0))) : (toTuple . toBeginOfNextDay) v
 
 toBeginOfNextDay :: VEvent -> VEvent
-toBeginOfNextDay v@VEvent{dtStart=dt@DateTime{date=d@Date{day},time=t@Time{hour, minute}}} = v{dtStart = dt{date=d{day=(Day ((unDay day)+1))}, time=t{hour=(Hour 0), minute=(Minute 0)}}}
+toBeginOfNextDay v@VEvent{dtStart=dt@DateTime{date=d@Date{day},time=t}} = v{dtStart = dt{date=d{day = Day (unDay day + 1)}, time=t{hour = Hour 0, minute = Minute 0}}}
                                                                                       
-toEndOfDay :: VEvent -> VEvent
-toEndOfDay v@VEvent{dtEnd=dt@DateTime{time=t@Time{hour,minute}}} = v{dtEnd = dt{time=t{hour=(Hour 23),minute=(Minute 59)}}}
-
 timeToString :: Time -> Time -> String
 timeToString (Time h1 m1 _) (Time h2 m2 _) = (addZeros 2.show.unHour) h1++":"++ (addZeros 2.show.unMinute) m1 ++ " - " ++ (addZeros 2.show.unHour) h2 ++ ":" ++ (addZeros 2.show.unMinute) m2
-
              
 eventsMonth :: Year -> Month -> Calendar -> [VEvent]
 eventsMonth y m (Calendar _ e) = filter (eventMonth y m) e
 
 eventMonth :: Year -> Month -> VEvent -> Bool
-eventMonth y m (VEvent _ _ (DateTime (Date y1 m1 d1) t1 u1) (DateTime (Date y2 m2 d2) t2 u2) _ _ _) = (y1 == y && m1 == m) || (y2 == y && m2 == m)
+eventMonth y m VEvent{dtStart = DateTime{date = Date y1 m1 _}, dtEnd = DateTime{date = Date y2 m2 _}} = (y1 == y && m1 == m) || (y2 == y && m2 == m)
