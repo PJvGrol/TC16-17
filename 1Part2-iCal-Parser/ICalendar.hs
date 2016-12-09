@@ -344,20 +344,24 @@ ppEmptyCalendar n = undefined
                   lineBreaks = replicate (x - 1) ppLine
                   
 ppEvent :: Int -> [(Int, String)] -> String
-ppEvent n [] | n `mod` 7 == 1 = ""
-ppEvent n es = z ++ d ++ ppEvent ((n `mod` 7) + n) y
+ppEvent n es | n `mod` 7 == 1 && es == [] = ""
+             | otherwise = z ++ d ++ ppEvent m y
            where
            x = findIndex (\x -> n == fst x) es
            e | x /= Nothing = es !! (fromJust x)
              | otherwise = (0,"")
-           d | e == (0,"") && n == 1 = "              "
+           d | e == (0,"") && n `mod` 7 == 1 = "              "
              | e == (0,"") = "|              "
-             | n == 1 = " " ++ snd e ++ " "
+             | n `mod` 7 == 1 = " " ++ snd e ++ " "
              | otherwise = "| " ++ snd e ++ " "
            y | x /= Nothing = delete e es  
              | otherwise = es
            z | n `mod` 7 == 1 = "\r\n"
              | otherwise = ""
+           m | n < 7 = (n `mod` 7) + 1
+             | n `mod` 7 == 0 && es == [] = n `mod` 7 + ((n `div` 7) * 7) + 1
+             | n `mod` 7 == 0 && fst (head es) <= n = n - 7 + 1
+             | otherwise = n `mod` 7 + ((n `div` 7) * 7) + 1
 
 
 eventsMonth :: Year -> Month -> Calendar -> [VEvent]
