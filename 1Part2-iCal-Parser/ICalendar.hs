@@ -190,6 +190,7 @@ dateSep :: Parser Char Char
 dateSep = symbol 'T'
 
 -- Exercise 2
+-- Straightforward: Open the file in readmode, set the newlinemode to notranslation, get the contents and try to recognize is as a calendar.
 readCalendar :: FilePath -> IO (Maybe Calendar)
 readCalendar file = do f <- openFile file ReadMode
                        hSetNewlineMode f noNewlineTranslation
@@ -198,23 +199,11 @@ readCalendar file = do f <- openFile file ReadMode
 
 
 -- Exercise 3
--- DO NOT use a derived Show instance. Your printing style needs to be nicer than that :)
-{-data Calendar = Calendar { prodId :: String
-                         , events :: [VEvent] }
-    deriving Eq
-
-data VEvent = VEvent { dtStamp     :: DateTime
-                     , uid         :: String
-                     , dtStart     :: DateTime
-                     , dtEnd       :: DateTime
-                     , description :: Maybe String
-                     , summary     :: Maybe String
-                     , location    :: Maybe String }
-    deriving Eq-}
-
+-- Nothing special happening, simply printing the needed strings.
 printCalendar :: Calendar -> String
 printCalendar (Calendar p e) = "BEGIN:VCALENDAR\r\nPRODID:" ++ p ++ "\r\nVERSION:2.0\r\n" ++ concatMap printEvent e ++ "END:VCALENDAR\r\n"
 
+-- This prints an event, we need to check whether des, sum and loc actually contain anything, since they are of the Maybe type.
 printEvent :: VEvent -> String
 printEvent (VEvent stamp uid start end des sum loc) = "BEGIN:VEVENT\r\nDTSTAMP:" ++ printDateTime stamp ++
                                                       "\r\nUID:" ++ uid ++ 
@@ -236,6 +225,10 @@ printEvent (VEvent stamp uid start end des sum loc) = "BEGIN:VEVENT\r\nDTSTAMP:"
                                                                      Just x -> "LOCATION:" ++ x ++ "\r\n"
                                                       
 
+-- printDateTime was copied from Part 1. This is the commentary added there:
+-- Printing is pretty straight forward. The only thing worth mentioning is addZeros. This function ensures that years, 
+-- months, days, hours, minutes and seconds have an equal amount digits by adding 0's to the front, since the first month
+-- must be represented as "01"
 printDateTime :: DateTime -> String
 printDateTime (DateTime dt t utc) = printDate dt ++ "T" ++ printTime t ++ op utc
         where op True  = "Z"
@@ -253,73 +246,97 @@ addZeros n s | n > length s = addZeros n ('0':s)
 
 -- Calendar "asfd" [(VEvent (DateTime (Date (Year 1) (Month 3) (Day 2)) (Time (Hour 23) (Minute 59) (Second 59)) True) "asd" (DateTime (Date (Year 1) (Month 3) (Day 2)) (Time (Hour 22) (Minute 59) (Second 59)) True) (DateTime (Date (Year 1) (Month 3) (Day 3)) (Time (Hour 0) (Minute 0) (Second 59)) True) Nothing Nothing Nothing),(VEvent (DateTime (Date (Year 1) (Month 3) (Day 2)) (Time (Hour 23) (Minute 59) (Second 59)) True) "asd" (DateTime (Date (Year 1) (Month 3) (Day 3)) (Time (Hour 0) (Minute 0) (Second 0)) True) (DateTime (Date (Year 1) (Month 3) (Day 3)) (Time (Hour 22) (Minute 59) (Second 59)) True) Nothing Nothing Nothing)]
 -- Exercise 4
+
+-- We simply count the length of [VEvents] in Calendar
 countEvents :: Calendar -> Int
 countEvents = length . events
 
+-- Checks whether one or more of the events is happening at given DateTime
 findEvents :: DateTime -> Calendar -> [VEvent]
-findEvents dt (Calendar _ e) = filter (inBetween dt) e
+findEvents dt (Calendar _ es) = filter (isHappening dt) es
 
+-- Checks whether a given DateTime is in between the start and end DateTime of the given VEvent, using the Ord, Eq instances
+isHappening :: DateTime -> VEvent -> Bool
+isHappening dt VEvent{dtStart, dtEnd} = dt >= dtStart && dt <= dtEnd
+
+-- Checks whether a given DateTime is in between the start and end DateTime of given VEvent, using the difference in time between them
 inBetween :: DateTime -> VEvent -> Bool
 inBetween dt VEvent{dtStart,dtEnd} = totalDiff dtStart dt >= 0 && totalDiff dt dtEnd >= 0
 
+-- Checks whether there are any overlapping events. We require more hits than total events, since overlap returns at least 1 for each event.
 checkOverlapping :: Calendar -> Bool
 checkOverlapping (Calendar _ e) = overlap e e > length e
 
+-- Recursive; for each event we check how many events are happening at that time. Since we check agains the entire list, we expect at least 1 hit (the event itself)
 overlap :: [VEvent] -> [VEvent] -> Int
 overlap [] _ = 0
 overlap (VEvent{dtStart}:xs) ys = length (filter id (map (inBetween dtStart) ys)) + overlap xs ys
 
+-- Calculates the total time spent on events, in minutes
 timeSpent :: String -> Calendar -> Int
-timeSpent s (Calendar _ e) = sum (map eventTime (filter (filterEvent s) e)) `div` 60
+timeSpent s (Calendar _ e) = sum (map eventTime (filter (filterEvent s) e))
 
+-- Filters events matching the given summary
 filterEvent :: String -> VEvent -> Bool
 filterEvent s VEvent{summary} = case summary of
                                      Nothing -> False
                                      Just x  -> x == s
 
+-- Calculates the time spent on a single event, in minutes                                    
 eventTime :: VEvent -> Int
 eventTime VEvent{dtStart,dtEnd} = totalDiff dtStart dtEnd
 
+-- Calculates the total difference in time, by calculating the difference in Date and Time
+-- We delegate the calculations to the lowest possible levels
 totalDiff :: DateTime -> DateTime -> Int
 totalDiff (DateTime bd bt _) (DateTime ed et _) = dateDiff bd ed + timeDiff bt et
 
 dateDiff :: Date -> Date -> Int
 dateDiff bd@(Date y1 _ d1) ed@(Date y2 _ d2) = yearDiff y1 y2 + monthDiff  bd ed + dayDiff d1 d2
 
+-- Equal years result in no time, otherwise we add the amount of minutes one year takes, and we recursively call the function whilst adding 1 to the beginyear
 yearDiff :: Year -> Year -> Int
 yearDiff y1@(Year y) y2 | y1 == y2    = 0
-                        | leapYear y1 = 366 * 24 * 3600 + yearDiff (Year (y+1)) y2
-                        | otherwise   = 365 * 24 * 3600 + yearDiff (Year (y+1)) y2
+                        | leapYear y1 = 366 * 24 * 60 + yearDiff (Year (y+1)) y2
+                        | otherwise   = 365 * 24 * 60 + yearDiff (Year (y+1)) y2
 
+-- Similar function to yearDiff, except that we now have to check whether the beginning month is earlier or later in the year.
+-- When the beginning date has an earlier month, we can simply add the time one month takes, otherwise we have to substract.                        
 monthDiff :: Date -> Date -> Int
 monthDiff d@(Date y1 (Month m1) d1) (Date y2 (Month m2) d2) | m1 == m2  = 0
                                                             | m1 < m2   =  days d + monthDiff (Date y1 (Month (m1 + 1)) d1) (Date y2 (Month m2) d2)
                                                             | otherwise = -days d + monthDiff (Date y1 (Month (m1 - 1)) d1) (Date y2 (Month m2) d2)
 
+-- Equal to monthDiff, only different amount of minutes in a day                                                         
 dayDiff :: Day -> Day -> Int
 dayDiff (Day d1) (Day d2) | d1 == d2  = 0
-                          | d1 < d2   = 24 * 3600 + dayDiff (Day (d1 + 1)) (Day d2)
-                          | otherwise = -(24 * 3600) + dayDiff (Day (d1 - 1)) (Day d2)
+                          | d1 < d2   = 24 * 60 + dayDiff (Day (d1 + 1)) (Day d2)
+                          | otherwise = -(24 * 60) + dayDiff (Day (d1 - 1)) (Day d2)
 
+-- Again, delegation to the lowest possible level
 timeDiff :: Time -> Time -> Int
-timeDiff (Time h1 m1 (Second s1)) (Time h2 m2 (Second s2)) = hourDiff h1 h2 + minuteDiff m1 m2 + (s2 - s1)
-                                
+timeDiff (Time h1 m1 _) (Time h2 m2 _) = hourDiff h1 h2 + minuteDiff m1 m2
+
+-- Equal to dayDiff, only different amount of minutes in an hour                               
 hourDiff :: Hour -> Hour -> Int
 hourDiff (Hour h1) (Hour h2) | h1 == h2  = 0
-                             | h1 < h2   = 3600 + hourDiff (Hour (h1 + 1)) (Hour h2)
-                             | otherwise = -3600 + hourDiff (Hour (h1 - 1)) (Hour h2)
+                             | h1 < h2   = 60 + hourDiff (Hour (h1 + 1)) (Hour h2)
+                             | otherwise = -60 + hourDiff (Hour (h1 - 1)) (Hour h2)
 
+-- Again, equal to hourdiff, only we now simply add or substract the minutes                             
 minuteDiff :: Minute -> Minute -> Int
 minuteDiff (Minute m1) (Minute m2) | m1 == m2  = 0
-                                   | m1 < m2   = 60 + minuteDiff (Minute (m1 + 1)) (Minute m2)
-                                   | otherwise = -60 + minuteDiff (Minute (m1 - 1)) (Minute m2)                                         
-                                   
+                                   | m1 < m2   = 1 + minuteDiff (Minute (m1 + 1)) (Minute m2)
+                                   | otherwise = -1 + minuteDiff (Minute (m1 - 1)) (Minute m2)                                         
+
+-- Checks whether a given year is a leapyear                                   
 leapYear :: Year -> Bool
 leapYear (Year y) | y `mod` 400 == 0 = True
                   | y `mod` 100 == 0 = False
                   | y `mod` 4   == 0 = True
                   | otherwise        = False
 
+-- Calculates the days in a month
 days :: Date -> Int
 days (Date y (Month m) _) | m == 2 && leapYear y = 29
                           | m == 2 = 28
@@ -341,9 +358,12 @@ op2 :: [String] -> [String] -> [String]
 op2 [] [] = []
 op2 (x:xs) (y:ys) = (x ++ y) : op2 xs ys
 
+-- Prints the following ---------------+---------------+ etc.
 ppLine :: String
-ppLine = tail (concat (replicate 7 ("+" ++ replicate 14 '-')))
+ppLine = tail (concat (replicate 7 ("+" ++ replicate 15 '-')))
 
+-- Prints the following  1             | 2             | etc.
+-- Since ppDay adds | to the beginning of every day, we have to take the tail of the list (remove the first |)
 ppDayLine :: Int -> Int -> String
 ppDayLine m n | m < n     = ' ' : tail (concat (replicate y ppEmptyDay))
               | otherwise = tail (concatMap ppDay [n .. x]) ++ concat (replicate y ppEmptyDay)
@@ -351,12 +371,17 @@ ppDayLine m n | m < n     = ' ' : tail (concat (replicate y ppEmptyDay))
                         x = min (n+6) m
                         y = n + 6 - x
 
+-- Prints a single day: | xx                                     
 ppDay :: Int -> String
 ppDay n = "| " ++ show n ++ replicate (14 - length (show n)) ' '
 
+-- Prints an empty day, to fill the calendar (days 32, 33 etc)
 ppEmptyDay :: String
-ppEmptyDay = "|" ++ replicate 14 ' '
-                  
+ppEmptyDay = "|" ++ replicate 15 ' '
+
+-- Prints the time an event takes for the whole week. If there are no events (left) and we're about to begin a newLine, we return the empty string
+-- Otherwise, we check whether there's an event on the given day, and if so we print the time. If there's no event we print an empty box. Then we move to the next day.
+-- This function can also print the events for an entire month, it is however not used as such                  
 ppEvent :: Int -> [(Int, String)] -> String
 ppEvent n es | n `mod` 7 == 1 && null es = ""
              | otherwise = z ++ d ++ ppEvent m y
@@ -365,8 +390,8 @@ ppEvent n es | n `mod` 7 == 1 && null es = ""
            e = case x of
                     Nothing -> (0,"")
                     Just i  -> es !! i
-           d | e == (0,"") && n `mod` 7 == 1 = "              "
-             | e == (0,"") = "|              "
+           d | e == (0,"") && n `mod` 7 == 1 = replicate 15 ' '
+             | e == (0,"") = "|" ++ replicate 15 ' '
              | n `mod` 7 == 1 = " " ++ snd e ++ " "
              | otherwise = "| " ++ snd e ++ " "
            y = case x of
@@ -399,9 +424,11 @@ toBeginOfNextDay v@VEvent{dtStart=dt@DateTime{date=d@Date{day},time=t}} = v{dtSt
                                                                                       
 timeToString :: Time -> Time -> String
 timeToString (Time h1 m1 _) (Time h2 m2 _) = (addZeros 2.show.unHour) h1++":"++ (addZeros 2.show.unMinute) m1 ++ " - " ++ (addZeros 2.show.unHour) h2 ++ ":" ++ (addZeros 2.show.unMinute) m2
-             
+
+-- Creates a list of events in the given Year and Month             
 eventsMonth :: Year -> Month -> Calendar -> [VEvent]
 eventsMonth y m (Calendar _ e) = filter (eventMonth y m) e
 
+-- Checks whether an event is happening in given combinating of year + month
 eventMonth :: Year -> Month -> VEvent -> Bool
 eventMonth y m VEvent{dtStart = DateTime{date = Date y1 m1 _}, dtEnd = DateTime{date = Date y2 m2 _}} = (y1 == y && m1 == m) || (y2 == y && m2 == m)
