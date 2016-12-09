@@ -329,7 +329,7 @@ ppDayLine m n = tail (concat (map ppDay [n..x])) ++ concat (replicate y ppEmptyD
               y = n + 6 - x
 
 ppDay :: Int -> String
-ppDay n = "| " ++ show n ++ replicate (13 - length (show n)) ' '
+ppDay n = "| " ++ show n ++ replicate (14 - length (show n)) ' '
 
 ppEmptyDay :: String
 ppEmptyDay = "|" ++ replicate (14) ' '
@@ -343,6 +343,23 @@ ppEmptyCalendar n = undefined
                   dayLines = map (ppDayLine n) d
                   lineBreaks = replicate (x - 1) ppLine
                   
+ppEvent :: Int -> [(Int, String)] -> String
+ppEvent n [] | n `mod` 7 == 1 = ""
+ppEvent n es = z ++ d ++ ppEvent ((n `mod` 7) + n) y
+           where
+           x = findIndex (\x -> n == fst x) es
+           e | x /= Nothing = es !! (fromJust x)
+             | otherwise = (0,"")
+           d | e == (0,"") && n == 1 = "              "
+             | e == (0,"") = "|              "
+             | n == 1 = " " ++ snd e ++ " "
+             | otherwise = "| " ++ snd e ++ " "
+           y | x /= Nothing = delete e es  
+             | otherwise = es
+           z | n `mod` 7 == 1 = "\r\n"
+             | otherwise = ""
+
+
 eventsMonth :: Year -> Month -> Calendar -> [VEvent]
 eventsMonth y m (Calendar _ e) = filter (eventMonth y m) e
 
