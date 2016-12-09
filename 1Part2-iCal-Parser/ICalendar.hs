@@ -261,7 +261,7 @@ overlap [] xs = 0
 overlap ((VEvent _ _ start _ _ _ _):xs) ys = length (filter id (map (inBetween start) ys)) + overlap xs ys
 
 timeSpent :: String -> Calendar -> Int
-timeSpent s (Calendar _ e) = foldr (+) 0 (map eventTime (filter (filterEvent s) e))
+timeSpent s (Calendar _ e) = (foldr (+) 0 (map eventTime (filter (filterEvent s) e))) `div` 60
 
 filterEvent :: String -> VEvent -> Bool
 filterEvent s (VEvent _ _ _ _ _ summ _) = s == fromJust summ
@@ -317,5 +317,34 @@ days (Date y (Month m) d) | m == 2 && leapYear y = 29
 
 -- Exercise 5
 ppMonth :: Year -> Month -> Calendar -> PP.Doc
-ppMonth = undefined
+ppMonth y m c = undefined
 
+ppLine :: String
+ppLine = tail (concat (replicate 7 ("+" ++ replicate 14 '-')))
+
+ppDayLine :: Int -> Int -> String
+ppDayLine m n = tail (concat (map ppDay [n..x])) ++ concat (replicate y ppEmptyDay)
+              where
+              x = min (n+6) m
+              y = n + 6 - x
+
+ppDay :: Int -> String
+ppDay n = "| " ++ show n ++ replicate (13 - length (show n)) ' '
+
+ppEmptyDay :: String
+ppEmptyDay = "|" ++ replicate (14) ' '
+
+ppEmptyCalendar :: Int -> PP.Doc
+ppEmptyCalendar n = undefined
+                  where 
+                  x = n `div` 7
+                  f y = y * 7 + 1
+                  d = map f [0..x]
+                  dayLines = map (ppDayLine n) d
+                  lineBreaks = replicate (x - 1) ppLine
+                  
+eventsMonth :: Year -> Month -> Calendar -> [VEvent]
+eventsMonth y m (Calendar _ e) = filter (eventMonth y m) e
+
+eventMonth :: Year -> Month -> VEvent -> Bool
+eventMonth y m (VEvent _ _ (DateTime (Date y1 m1 d1) t1 u1) (DateTime (Date y2 m2 d2) t2 u2) _ _ _) = (y1 == y && m1 == m) || (y2 == y && m2 == m)
