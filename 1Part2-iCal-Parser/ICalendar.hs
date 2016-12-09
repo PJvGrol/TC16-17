@@ -323,14 +323,26 @@ days (Date y (Month m) d) | m == 2 && leapYear y = 29
 ppMonth :: Year -> Month -> Calendar -> PP.Doc
 ppMonth y m c = undefined
 
+ppMonth2 :: Int -> [VEvent] -> String
+ppMonth2 m xs = intercalate ppLine (op2 (map (ppDayLine m) [7*k-6 | k <-[1..5]]) (op3 m 1 xs))
+
+op3 :: Int -> Int -> [VEvent] -> [String]
+op3 m d xs | d>m = []
+           | otherwise = ppEvent d (sortOnWeek m (toTuples xs) !! (d `div` 7)) : op3 m (d + 7) xs 
+
+op2 :: [String] -> [String] -> [String] 
+op2 [] [] = []
+op2 (x:xs) (y:ys) = (x++y):op2 xs ys
+
 ppLine :: String
 ppLine = tail (concat (replicate 7 ("+" ++ replicate 14 '-')))
 
 ppDayLine :: Int -> Int -> String
-ppDayLine m n = tail (concat (map ppDay [n..x])) ++ concat (replicate y ppEmptyDay)
-              where
-              x = min (n+6) m
-              y = n + 6 - x
+ppDayLine m n | m < n     = ' ' : tail (concat (replicate (n+6-(min (n+6) m)) ppEmptyDay))
+              | otherwise = tail (concat (map ppDay [n..x])) ++ concat (replicate y ppEmptyDay)
+                       where
+                        x = min (n+6) m
+                        y = n + 6 - x
 
 ppDay :: Int -> String
 ppDay n = "| " ++ show n ++ replicate (14 - length (show n)) ' '
@@ -368,6 +380,31 @@ ppEvent n es | n `mod` 7 == 1 && es == [] = ""
              | otherwise = n `mod` 7 + ((n `div` 7) * 7) + 1
 
 
+sortOnWeek :: Int -> [(Int, String)] -> [[(Int, String)]]
+sortOnWeek n xs = map (op n xs) [7*k-6 | k <- [1..5]]
+
+op :: Int -> [(Int, String)] -> Int -> [(Int, String)]
+op n xs week = filter f xs
+        where f (a,b) = a >= week && a < week + 7 && a<=n
+
+toTuples :: [VEvent] -> [(Int, String)]
+toTuples [] = []
+toTuples (x:xs) = toTuple x ++ toTuples xs
+
+toTuple :: VEvent -> [(Int, String)]
+toTuple v | (unDay.day.date.dtEnd) v == (unDay.day.date.dtStart) v = [((unDay.day.date.dtStart) v,timeToString ((time.dtStart) v) ((time.dtEnd) v))]
+          | otherwise                        = ((unDay.day.date.dtStart) v, timeToString ((time.dtStart) v) (Time (Hour 23) (Minute 59) (Second 0))) : toTuple (toBeginOfNextDay v) --(((unDay.day.date.dtStart) v)`mod` 7,v {dtEnd=})
+
+toBeginOfNextDay :: VEvent -> VEvent
+toBeginOfNextDay v@VEvent{dtStart=dt@DateTime{date=d@Date{day},time=t@Time{hour, minute}}} = v{dtStart = dt{date=d{day=(Day ((unDay day)+1))}, time=t{hour=(Hour 0), minute=(Minute 0)}}}
+                                                                                      
+toEndOfDay :: VEvent -> VEvent
+toEndOfDay v@VEvent{dtEnd=dt@DateTime{time=t@Time{hour,minute}}} = v{dtEnd = dt{time=t{hour=(Hour 23),minute=(Minute 59)}}}
+
+timeToString :: Time -> Time -> String
+timeToString (Time h1 m1 _) (Time h2 m2 _) = (addZeros 2.show.unHour) h1++":"++ (addZeros 2.show.unMinute) m1 ++ " - " ++ (addZeros 2.show.unHour) h2 ++ ":" ++ (addZeros 2.show.unMinute) m2
+
+             
 eventsMonth :: Year -> Month -> Calendar -> [VEvent]
 eventsMonth y m (Calendar _ e) = filter (eventMonth y m) e
 
