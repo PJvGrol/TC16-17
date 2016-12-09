@@ -50,8 +50,6 @@ data VEvent = VEvent { dtStamp     :: DateTime
                      , location    :: Maybe String }
     deriving Eq
 
---instance Show DateTime where
---    show = printDateTime
  
 data Props = DtStamp DateTime
            | Uid String
@@ -73,22 +71,20 @@ recognizeCalendar = run parseCalendar
 -- If you want to run the parser + pretty-printing, rename this module (first line) to "Main".
 -- DO NOT forget to rename the module back to "ICalendar" before submitting to DomJudge.
 main = do
-    res <- readCalendar "examples/bastille.ics"
+    res <- readCalendar "examples/rooster_infotc.ics"
     putStrLn . PP.render $ maybe (PP.text "Calendar parsing error") (ppMonth (Year 2012) (Month 11)) res
 
 
---main = interact (\x -> (printCalendar.fst) ((parse parseCalendar x) !! 0))
 
 -- Exercise 1
 data Token = Token
     deriving (Eq, Ord, Show)
 
+-- Parses the a Calendar, pretty straightforward
 parseCalendar :: Parser Char Calendar
 parseCalendar = Calendar <$ token "BEGIN:VCALENDAR\r\n" <*> parseCalProp <*> many parseEvent <* token "END:VCALENDAR\r\n" <* eof
 
-{-toString :: String -> String
-toString a = show (parse parseCalendar a)-}
-
+-- Parses the properties of a Calendar. Because the order is not predetermined, both possibilities are parsed.
 parseCalProp :: Parser Char String
 parseCalProp = parseVersion *> parseProdId <|> parseProdId <* parseVersion
 
@@ -244,7 +240,6 @@ addZeros :: Int -> String -> String
 addZeros n s | n > length s = addZeros n ('0':s)
              | otherwise = s
 
--- Calendar "asfd" [(VEvent (DateTime (Date (Year 1) (Month 3) (Day 2)) (Time (Hour 23) (Minute 59) (Second 59)) True) "asd" (DateTime (Date (Year 1) (Month 3) (Day 2)) (Time (Hour 22) (Minute 59) (Second 59)) True) (DateTime (Date (Year 1) (Month 3) (Day 3)) (Time (Hour 0) (Minute 0) (Second 59)) True) Nothing Nothing Nothing),(VEvent (DateTime (Date (Year 1) (Month 3) (Day 2)) (Time (Hour 23) (Minute 59) (Second 59)) True) "asd" (DateTime (Date (Year 1) (Month 3) (Day 3)) (Time (Hour 0) (Minute 0) (Second 0)) True) (DateTime (Date (Year 1) (Month 3) (Day 3)) (Time (Hour 22) (Minute 59) (Second 59)) True) Nothing Nothing Nothing)]
 -- Exercise 4
 
 -- We simply count the length of [VEvents] in Calendar
@@ -297,21 +292,24 @@ dateDiff bd@(Date y1 _ d1) ed@(Date y2 _ d2) = yearDiff y1 y2 + monthDiff  bd ed
 -- Equal years result in no time, otherwise we add the amount of minutes one year takes, and we recursively call the function whilst adding 1 to the beginyear
 yearDiff :: Year -> Year -> Int
 yearDiff y1@(Year y) y2 | y1 == y2    = 0
-                        | leapYear y1 = 366 * 24 * 60 + yearDiff (Year (y+1)) y2
-                        | otherwise   = 365 * 24 * 60 + yearDiff (Year (y+1)) y2
+                        | leapYear y1 = rem 366
+                        | otherwise   = rem 365
+                        where rem n = n * 24 * 60 + yearDiff (Year (y+1)) y2
 
 -- Similar function to yearDiff, except that we now have to check whether the beginning month is earlier or later in the year.
 -- When the beginning date has an earlier month, we can simply add the time one month takes, otherwise we have to substract.                        
 monthDiff :: Date -> Date -> Int
 monthDiff d@(Date y1 (Month m1) d1) (Date y2 (Month m2) d2) | m1 == m2  = 0
-                                                            | m1 < m2   =  days d + monthDiff (Date y1 (Month (m1 + 1)) d1) (Date y2 (Month m2) d2)
-                                                            | otherwise = -days d + monthDiff (Date y1 (Month (m1 - 1)) d1) (Date y2 (Month m2) d2)
+                                                            | m1 < m2   = temp 1
+                                                            | otherwise = temp (-1)
+                                                            where temp i = i * days d + monthDiff (Date y1 (Month (m1 + i)) d1) (Date y2 (Month m2) d2)
 
 -- Equal to monthDiff, only different amount of minutes in a day                                                         
 dayDiff :: Day -> Day -> Int
 dayDiff (Day d1) (Day d2) | d1 == d2  = 0
-                          | d1 < d2   = 24 * 60 + dayDiff (Day (d1 + 1)) (Day d2)
-                          | otherwise = -(24 * 60) + dayDiff (Day (d1 - 1)) (Day d2)
+                          | d1 < d2   = temp 1
+                          | otherwise = temp (-1)
+                          where temp i = i * 24 * 60 + dayDiff (Day (d1 + i)) (Day d2)
 
 -- Again, delegation to the lowest possible level
 timeDiff :: Time -> Time -> Int
@@ -320,14 +318,16 @@ timeDiff (Time h1 m1 _) (Time h2 m2 _) = hourDiff h1 h2 + minuteDiff m1 m2
 -- Equal to dayDiff, only different amount of minutes in an hour                               
 hourDiff :: Hour -> Hour -> Int
 hourDiff (Hour h1) (Hour h2) | h1 == h2  = 0
-                             | h1 < h2   = 60 + hourDiff (Hour (h1 + 1)) (Hour h2)
-                             | otherwise = -60 + hourDiff (Hour (h1 - 1)) (Hour h2)
+                             | h1 < h2   = temp 1
+                             | otherwise = temp (-1)
+                             where temp i = i * 60 + hourDiff (Hour (h1 + i)) (Hour h2)
 
 -- Again, equal to hourdiff, only we now simply add or substract the minutes                             
 minuteDiff :: Minute -> Minute -> Int
 minuteDiff (Minute m1) (Minute m2) | m1 == m2  = 0
-                                   | m1 < m2   = 1 + minuteDiff (Minute (m1 + 1)) (Minute m2)
-                                   | otherwise = -1 + minuteDiff (Minute (m1 - 1)) (Minute m2)                                         
+                                   | m1 < m2   = temp 1
+                                   | otherwise = temp (-1)
+                                   where temp i = i + minuteDiff (Minute (m1 + i)) (Minute m2)
 
 -- Checks whether a given year is a leapyear                                   
 leapYear :: Year -> Bool
@@ -357,7 +357,6 @@ op3 m d xs | d > m = []
 zipLists :: [String] -> [String] -> [String] 
 zipLists [] [] = []
 zipLists (x:xs) (y:ys) = (x ++ y) : zipLists xs ys
---zipLists  _ [] = []
 
 -- Prints the following ---------------+---------------+ etc.
 ppLine :: String
@@ -383,27 +382,7 @@ ppEmptyDay = "|" ++ replicate 15 ' '
 -- Prints the time an event takes for the whole week. If there are no events (left) and we're about to begin a newLine, we return the empty string
 -- Otherwise, we check whether there's an event on the given day, and if so we print the time. If there's no event we print an empty box. Then we move to the next day.
 -- This function can also print the events for an entire month, it is however not used as such                  
-{-ppEvent :: Int -> [(Int, String)] -> String
-ppEvent n es | n `mod` 7 == 1 && null es = ""
-             | otherwise = z ++ d ++ ppEvent m y
-           where
-           x = findIndex (\x -> n == fst x) es
-           e = case x of
-                    Nothing -> (0,"")
-                    Just i  -> es !! i
-           d | e == (0,"") && n `mod` 7 == 1 = replicate 15 ' '
-             | e == (0,"") = "|" ++ replicate 15 ' '
-             | n `mod` 7 == 1 = " " ++ snd e ++ " "
-             | otherwise = "| " ++ snd e ++ " "
-           y = case x of
-                    Nothing -> delete e es
-                    Just _  -> es
-           z | n `mod` 7 == 1 = "\r\n"
-             | otherwise = ""
-           m | n < 7 = (n `mod` 7) + 1
-             | n `mod` 7 == 0 && null es = n `mod` 7 + ((n `div` 7) * 7) + 1
-             | n `mod` 7 == 0 && fst (head es) <= n = n - 7 + 1
-             | otherwise = n `mod` 7 + ((n `div` 7) * 7) + 1-}
+
 ppEvent :: Int -> [(Int, String)] -> String
 ppEvent n es | n `mod` 7 == 1 && null es = ""
              | otherwise = z ++ d ++ ppEvent m y
@@ -437,9 +416,10 @@ toTuples :: [VEvent] -> [(Int, String)]
 toTuples = foldr ((++) . toTuple) []
 
 toTuple :: VEvent -> [(Int, String)]
-toTuple v | (unDay.day.date.dtEnd) v == (unDay.day.date.dtStart) v = [((unDay.day.date.dtStart) v,timeToString ((time.dtStart) v) ((time.dtEnd) v))]
-          | otherwise                        = ((unDay.day.date.dtStart) v, timeToString ((time.dtStart) v) (Time (Hour 23) (Minute 59) (Second 0))) : (toTuple . toBeginOfNextDay) v
-
+toTuple v | (fullunDay.dtEnd) v == (fullunDay.dtStart) v = [((fullunDay.dtStart) v,timeToString ((time.dtStart) v) ((time.dtEnd) v))]
+          | otherwise                                    = ((fullunDay.dtStart) v, timeToString ((time.dtStart) v) (Time (Hour 23) (Minute 59) (Second 0))) : (toTuple . toBeginOfNextDay) v
+          where fullunDay = unDay.day.date
+          
 toBeginOfNextDay :: VEvent -> VEvent
 toBeginOfNextDay v@VEvent{dtStart=dt@DateTime{date=d@Date{day},time=t}} = v{dtStart = dt{date=d{day = Day (unDay day + 1)}, time=t{hour = Hour 0, minute = Minute 0}}}
                                                                                       
