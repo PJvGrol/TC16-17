@@ -4,7 +4,9 @@ import ParseLib.Abstract
 import Data.Char
 import Data.Maybe
 import System.IO
-import Text.PrettyPrint
+import Prelude hiding ((<$),(<*),(*>))
+import qualified Text.PrettyPrint as PP
+import Data.List
 
 
 data DateTime = DateTime { date :: Date
@@ -46,12 +48,21 @@ data VEvent = VEvent { dtStamp     :: DateTime
 
 instance Show DateTime where
     show = printDateTime
-    
+ 
+data Props = DtStamp DateTime
+           | Uid String
+           | DtStart DateTime
+           | DtEnd DateTime
+           | Description String
+           | Summary String
+           | Location String
+           deriving (Ord, Show, Eq)
+           
 run :: Parser a b -> [a] -> Maybe b
 run p s = listToMaybe [p | (p, []) <- parse p s]
 
 recognizeCalendar :: String -> Maybe Calendar
-recognizeCalendar s = run scanCalendar s >>= run parseCalendar
+recognizeCalendar s = run parseCalendar s
 
 
 -- "Main" block, DO NOT EDIT.
@@ -59,23 +70,73 @@ recognizeCalendar s = run scanCalendar s >>= run parseCalendar
 -- DO NOT forget to rename the module back to "ICalendar" before submitting to DomJudge.
 main = do
     res <- readCalendar "examples/rooster_infotc.ics"
-    putStrLn . render $ maybe (text "Calendar parsing error") (ppMonth (Year 2012) (Month 11)) res
+    putStrLn . PP.render $ maybe (PP.text "Calendar parsing error") (ppMonth (Year 2012) (Month 11)) res
 
 
 -- Exercise 1
 data Token = Token
     deriving (Eq, Ord, Show)
 
-scanCalendar :: Parser Char [Token]
-scanCalendar = undefined
+parseCalendar :: Parser Char Calendar
+parseCalendar = (\r xs -> (Calendar r xs)) <$ token "BEGIN:VCALENDAR\n" <*> parseCalProp <*> many parseEvent <* token "END:VCALENDAR\n" <* eof
 
-parseCalendar :: Parser Token Calendar
-parseCalendar = undefined
+{-toString :: String -> String
+toString a = show (parse parseCalendar a)-}
 
-parseCalProp :: Parser Token String
-parseCalProp = undefined --ParseProdID <|> parseVersion
+parseCalProp :: Parser Char String
+parseCalProp = parseVersion *> parseProdId <|> parseProdId <* parseVersion
 
---parseVersion :: Parser
+parseVersion :: Parser Char ()
+parseVersion = const () <$> token "VERSION:2.0\n"
+
+parseProdId :: Parser Char String
+parseProdId = token "PRODID:" *> parseToEnd
+
+parseEvent :: Parser Char VEvent
+parseEvent = (token "BEGIN:VEVENT\n" *> greedy parseProp <* token "END:VEVENT\n") >>= (f.sort)
+
+f :: [Props] -> Parser Char VEvent
+f xs =  case g xs of
+            Nothing -> empty
+            Just x -> case h x (drop 4 xs) of 
+                        Nothing -> empty
+                        Just y  -> succeed y
+
+g :: [Props] -> Maybe VEvent
+g ((DtStamp dm):(Uid u):(DtStart ds):(DtEnd de):xs) = Just (VEvent dm u ds de Nothing Nothing Nothing)
+g _ = Nothing
+
+h :: VEvent -> [Props] -> Maybe VEvent
+h v@(VEvent a b c d e f g) xs = case xs of
+                                   [] -> Just v
+                                   (Description de:xss) -> h1 (VEvent a b c d (Just de) f g) xss
+                                   _ -> h1 v xs
+
+h1 :: VEvent -> [Props] -> Maybe VEvent
+h1 v@(VEvent a b c d e f g) xs = case xs of
+                                   [] -> Just v
+                                   (Summary su:xss) -> h2 (VEvent a b c d e (Just su) g) xss
+                                   _ -> h2 v xs
+                                   
+h2 :: VEvent -> [Props] -> Maybe VEvent
+h2 v@(VEvent a b c d e f g) xs = case xs of
+                                   [] -> Just v
+                                   (Location lo:[]) -> Just (VEvent a b c d e f (Just lo))
+                                   _ -> Nothing
+
+parseProp :: Parser Char Props
+parseProp = DtStamp     <$ token "DTSTAMP:"     <*> parseDTToEnd  <|>
+            Uid         <$ token "UID:"         <*> parseToEnd    <|>
+            DtStart     <$ token "DTSTART:"     <*> parseDTToEnd  <|>
+            DtEnd       <$ token "DTEND:"       <*> parseDTToEnd  <|>
+            Description <$ token "DESCRIPTION:" <*> parseToEnd    <|>
+            Summary     <$ token "SUMMARY:"     <*> parseToEnd    <|>
+            Location    <$ token "LOCATION:"    <*> parseToEnd
+            where parseDTToEnd = parseDateTime <* symbol '\n'
+            
+
+parseToEnd :: Parser Char String
+parseToEnd = greedy (satisfy (/='\n')) <* symbol '\n'
 
 -- DateTime parser from Part 1
 
@@ -255,6 +316,6 @@ days (Date y (Month m) d) | m == 2 && leapYear y = 29
                           | otherwise = 31
 
 -- Exercise 5
-ppMonth :: Year -> Month -> Calendar -> Doc
+ppMonth :: Year -> Month -> Calendar -> PP.Doc
 ppMonth = undefined
 
