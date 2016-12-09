@@ -50,8 +50,8 @@ data VEvent = VEvent { dtStamp     :: DateTime
                      , location    :: Maybe String }
     deriving Eq
 
-instance Show DateTime where
-    show = printDateTime
+--instance Show DateTime where
+--    show = printDateTime
  
 data Props = DtStamp DateTime
            | Uid String
@@ -60,7 +60,7 @@ data Props = DtStamp DateTime
            | Description String
            | Summary String
            | Location String
-           deriving (Ord, Show, Eq)
+           deriving (Ord, Eq)
            
 run :: Parser a b -> [a] -> Maybe b
 run p s = listToMaybe [p | (p, []) <- parse p s]
@@ -72,10 +72,12 @@ recognizeCalendar s = run parseCalendar s
 -- "Main" block, DO NOT EDIT.
 -- If you want to run the parser + pretty-printing, rename this module (first line) to "Main".
 -- DO NOT forget to rename the module back to "ICalendar" before submitting to DomJudge.
-main = do
+{-main = do
     res <- readCalendar "examples/rooster_infotc.ics"
     putStrLn . PP.render $ maybe (PP.text "Calendar parsing error") (ppMonth (Year 2012) (Month 11)) res
+-}
 
+main = interact (\x -> ((printCalendar.fst) ((parse parseCalendar x) !! 0)))
 
 -- Exercise 1
 data Token = Token
@@ -214,21 +216,24 @@ printCalendar :: Calendar -> String
 printCalendar (Calendar p e) = "BEGIN:VCALENDAR\r\nPRODID:" ++ p ++ "\r\nVERSION:2.0\r\n" ++ concat (map printEvent e) ++ "END:VCALENDAR\r\n"
 
 printEvent :: VEvent -> String
-printEvent (VEvent stamp uid start end des sum loc) = "BEGIN:VEVENT\r\nDTSTAMP:" ++ show stamp ++
+printEvent (VEvent stamp uid start end des sum loc) = "BEGIN:VEVENT\r\nDTSTAMP:" ++ printDateTime stamp ++
                                                       "\r\nUID:" ++ uid ++ 
-                                                      "\r\nDTSTART:" ++ show start ++ 
-                                                      "\r\nDTEND:" ++ show end ++ "\r\n" ++
+                                                      "\r\nDTSTART:" ++ printDateTime start ++ 
+                                                      "\r\nDTEND:" ++ printDateTime end ++ "\r\n" ++
                                                       showdes ++
                                                       showsum ++
                                                       showloc ++
                                                       "END:VEVENT\r\n"
                                                       where
-                                                      showdes | isNothing des = ""
-                                                              | otherwise = "DESCRIPTION:" ++ fromJust des ++ "\r\n"
-                                                      showsum | isNothing sum = ""
-                                                              | otherwise = "SUMMARY:" ++ fromJust sum ++ "\r\n"
-                                                      showloc | isNothing loc = ""
-                                                              | otherwise = "LOCATION:" ++ fromJust loc ++ "\r\n"
+                                                      showdes = case des of
+                                                                     Nothing -> ""
+                                                                     Just x -> "DESCRIPTION:" ++ x ++ "\r\n"
+                                                      showsum = case sum of
+                                                                     Nothing -> ""
+                                                                     Just x -> "SUMMARY:" ++ x ++ "\r\n"
+                                                      showloc = case loc of
+                                                                     Nothing -> ""
+                                                                     Just x -> "LOCATION:" ++ x ++ "\r\n"
                                                       
 
 printDateTime :: DateTime -> String
@@ -255,23 +260,23 @@ findEvents :: DateTime -> Calendar -> [VEvent]
 findEvents dt (Calendar _ e) = filter (inBetween dt) e
 
 inBetween :: DateTime -> VEvent -> Bool
-inBetween dt (VEvent _ _ start end _ _ _) = totalDiff start dt >= 0 && totalDiff dt end > 0
+inBetween dt VEvent{dtStart,dtEnd} = totalDiff dtStart dt >= 0 && totalDiff dt dtEnd > 0
 
 checkOverlapping :: Calendar -> Bool
 checkOverlapping (Calendar _ e) = overlap e e > length e
 
 overlap :: [VEvent] -> [VEvent] -> Int
 overlap [] xs = 0
-overlap ((VEvent _ _ start _ _ _ _):xs) ys = length (filter id (map (inBetween start) ys)) + overlap xs ys
+overlap (VEvent{dtStart}:xs) ys = length (filter id (map (inBetween dtStart) ys)) + overlap xs ys
 
 timeSpent :: String -> Calendar -> Int
 timeSpent s (Calendar _ e) = (foldr (+) 0 (map eventTime (filter (filterEvent s) e))) `div` 60
 
 filterEvent :: String -> VEvent -> Bool
-filterEvent s (VEvent _ _ _ _ _ summ _) = s == fromJust summ
+filterEvent s VEvent{summary} = s == fromJust summary
 
 eventTime :: VEvent -> Int
-eventTime (VEvent _ _ start end _ _ _) = totalDiff start end
+eventTime VEvent{dtStart,dtEnd} = totalDiff dtStart dtEnd
 
 totalDiff :: DateTime -> DateTime -> Int
 totalDiff (DateTime bd bt _) (DateTime ed et _) = dateDiff bd ed + timeDiff bt et
@@ -321,7 +326,7 @@ days (Date y (Month m) d) | m == 2 && leapYear y = 29
 
 -- Exercise 5
 ppMonth :: Year -> Month -> Calendar -> PP.Doc
-ppMonth y m c = undefined
+ppMonth y m c = PP.text (ppMonth2 (unMonth m) (eventsMonth y m c))
 
 ppMonth2 :: Int -> [VEvent] -> String
 ppMonth2 m xs = intercalate ppLine (op2 (map (ppDayLine m) [7*k-6 | k <-[1..5]]) (op3 m 1 xs))
