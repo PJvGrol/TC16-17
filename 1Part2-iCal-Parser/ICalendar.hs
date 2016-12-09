@@ -1,3 +1,7 @@
+{-# LANGUAGE DisambiguateRecordFields, NamedFieldPuns, RecordWildCards       #-}
+{-# LANGUAGE ParallelListComp                                                #-}
+
+
 module ICalendar where
 
 import ParseLib.Abstract
