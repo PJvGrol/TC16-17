@@ -73,7 +73,7 @@ recognizeCalendar = run parseCalendar
 -- If you want to run the parser + pretty-printing, rename this module (first line) to "Main".
 -- DO NOT forget to rename the module back to "ICalendar" before submitting to DomJudge.
 main = do
-    res <- readCalendar "examples/rooster_infotc.ics"
+    res <- readCalendar "examples/bastille.ics"
     putStrLn . PP.render $ maybe (PP.text "Calendar parsing error") (ppMonth (Year 2012) (Month 11)) res
 
 
@@ -199,18 +199,7 @@ readCalendar file = do f <- openFile file ReadMode
 
 -- Exercise 3
 -- DO NOT use a derived Show instance. Your printing style needs to be nicer than that :)
-{-data Calendar = Calendar { prodId :: String
-                         , events :: [VEvent] }
-    deriving Eq
 
-data VEvent = VEvent { dtStamp     :: DateTime
-                     , uid         :: String
-                     , dtStart     :: DateTime
-                     , dtEnd       :: DateTime
-                     , description :: Maybe String
-                     , summary     :: Maybe String
-                     , location    :: Maybe String }
-    deriving Eq-}
 
 printCalendar :: Calendar -> String
 printCalendar (Calendar p e) = "BEGIN:VCALENDAR\r\nPRODID:" ++ p ++ "\r\nVERSION:2.0\r\n" ++ concatMap printEvent e ++ "END:VCALENDAR\r\n"
@@ -328,18 +317,19 @@ days (Date y (Month m) _) | m == 2 && leapYear y = 29
 
 -- Exercise 5
 ppMonth :: Year -> Month -> Calendar -> PP.Doc
-ppMonth y m c = PP.text (ppMonth2 (unMonth m) (eventsMonth y m c))
+ppMonth y m c = PP.text (ppMonth2 (days (Date y m (Day 1))) (eventsMonth y m c))
 
 ppMonth2 :: Int -> [VEvent] -> String
-ppMonth2 m xs = intercalate ppLine (op2 (map (ppDayLine m) [7 * k - 6 | k <- [1..5]]) (op3 m 1 xs))
+ppMonth2 m xs = intercalate ppLine (zipLists (map (ppDayLine m) [7 * k - 6 | k <- [1..5]]) (op3 m 1 xs))
 
 op3 :: Int -> Int -> [VEvent] -> [String]
 op3 m d xs | d > m = []
            | otherwise = ppEvent d (sortOnWeek m (toTuples xs) !! (d `div` 7)) : op3 m (d + 7) xs 
 
-op2 :: [String] -> [String] -> [String] 
-op2 [] [] = []
-op2 (x:xs) (y:ys) = (x ++ y) : op2 xs ys
+zipLists :: [String] -> [String] -> [String] 
+zipLists [] [] = []
+zipLists (x:xs) (y:ys) = (x ++ y) : zipLists xs ys
+--zipLists  _ [] = []
 
 ppLine :: String
 ppLine = tail (concat (replicate 7 ("+" ++ replicate 14 '-')))
@@ -357,7 +347,7 @@ ppDay n = "| " ++ show n ++ replicate (14 - length (show n)) ' '
 ppEmptyDay :: String
 ppEmptyDay = "|" ++ replicate 14 ' '
                   
-ppEvent :: Int -> [(Int, String)] -> String
+{-ppEvent :: Int -> [(Int, String)] -> String
 ppEvent n es | n `mod` 7 == 1 && null es = ""
              | otherwise = z ++ d ++ ppEvent m y
            where
@@ -377,8 +367,28 @@ ppEvent n es | n `mod` 7 == 1 && null es = ""
            m | n < 7 = (n `mod` 7) + 1
              | n `mod` 7 == 0 && null es = n `mod` 7 + ((n `div` 7) * 7) + 1
              | n `mod` 7 == 0 && fst (head es) <= n = n - 7 + 1
-             | otherwise = n `mod` 7 + ((n `div` 7) * 7) + 1
+             | otherwise = n `mod` 7 + ((n `div` 7) * 7) + 1-}
 
+ppEvent n es | n `mod` 7 == 1 && null es = ""
+             | otherwise = z ++ d ++ ppEvent m y
+           where
+             x = findIndex (\x -> n == fst x) es
+             e = case x of
+                    Nothing -> (0,"")
+                    Just i  -> es !! i
+             d | e == (0,"") && n `mod` 7 == 1 = "              "
+               | e == (0,"") = "|              "
+               | n `mod` 7 == 1 = " " ++ snd e ++ " "
+               | otherwise = "| " ++ snd e ++ " "
+             y = case x of
+                    Nothing -> es
+                    Just _  -> delete e es
+             z | n `mod` 7 == 1 = "\r\n"
+               | otherwise = ""
+             m | n < 7 = (n `mod` 7) + 1
+               | n `mod` 7 == 0 && null es = n `mod` 7 + ((n `div` 7) * 7) + 1
+               | n `mod` 7 == 0 && fst (head es) <= n = n - 7 + 1
+               | otherwise = n `mod` 7 + ((n `div` 7) * 7) + 1
 
 sortOnWeek :: Int -> [(Int, String)] -> [[(Int, String)]]
 sortOnWeek n xs = map (op n xs) [7*k-6 | k <- [1..5]]
