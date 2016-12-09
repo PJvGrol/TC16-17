@@ -1,5 +1,4 @@
-{-# LANGUAGE DisambiguateRecordFields, NamedFieldPuns, RecordWildCards       #-}
-{-# LANGUAGE ParallelListComp                                                #-}
+{-# LANGUAGE DisambiguateRecordFields, NamedFieldPuns #-}
 
 
 module ICalendar where
@@ -50,7 +49,7 @@ data VEvent = VEvent { dtStamp     :: DateTime
                      , location    :: Maybe String }
     deriving Eq
 
- 
+-- All the properties now have a common data type, so we can parse all of them with one method
 data Props = DtStamp DateTime
            | Uid String
            | DtStart DateTime
@@ -94,45 +93,48 @@ parseVersion = const () <$> token "VERSION:2.0\r\n"
 parseProdId :: Parser Char String
 parseProdId = token "PRODID:" *> parseToEnd
 
+-- Parses all properties of an event, then sorts them and tries to convert them to an Event
 parseEvent :: Parser Char VEvent
-parseEvent = (token "BEGIN:VEVENT\r\n" *> greedy parseProp <* token "END:VEVENT\r\n") >>= (f.sort)
+parseEvent = (token "BEGIN:VEVENT\r\n" *> greedy parseProp <* token "END:VEVENT\r\n") >>= (propsToEvent.sort)
 
-f :: [Props] -> Parser Char VEvent
-f xs =  case g xs of
-            (Nothing, _) -> empty
-            (Just x, ys) -> case h x ys of 
-                                Nothing -> empty
-                                Just y  -> succeed y
+propsToEvent :: [Props] -> Parser Char VEvent
+propsToEvent xs =  case mandProps xs of
+                        (Nothing, _) -> empty
+                        (Just x, ys) -> case testdes x ys of 
+                                             Nothing -> empty
+                                             Just y  -> succeed y
 
-g :: [Props] -> (Maybe VEvent, [Props])
-g (DtStamp dm : Uid u : DtStart ds : DtEnd de : xs) = (Just (VEvent dm u ds de Nothing Nothing Nothing), xs)
-g _ = (Nothing, [])
+-- Because all these properties are mandatory, we can fail if at least one of them doesn't occur exactly once.
+mandProps :: [Props] -> (Maybe VEvent, [Props])
+mandProps (DtStamp dm : Uid u : DtStart ds : DtEnd de : xs) = (Just (VEvent dm u ds de Nothing Nothing Nothing), xs)
+mandProps _ = (Nothing, [])
 
-h :: VEvent -> [Props] -> Maybe VEvent
-h v xs = case xs of
-              []                   -> Just v
-              (Description de:xss) -> h1 v{description = Just de} xss
-              _                    -> h1 v xs
+-- Now we test if the optional properties are present at most once
+testdes :: VEvent -> [Props] -> Maybe VEvent
+testdes v xs = case xs of
+                    []                   -> Just v
+                    (Description de:xss) -> testsum v{description = Just de} xss
+                    _                    -> testsum v xs
 
-h1 :: VEvent -> [Props] -> Maybe VEvent
-h1 v xs = case xs of
-               []               -> Just v
-               (Summary su:xss) -> h2 v{summary = Just su} xss
-               _                -> h2 v xs
+testsum :: VEvent -> [Props] -> Maybe VEvent
+testsum v xs = case xs of
+                    []               -> Just v
+                    (Summary su:xss) -> testloc v{summary = Just su} xss
+                    _                -> testloc v xs
                                    
-h2 :: VEvent -> [Props] -> Maybe VEvent
-h2 v xs = case xs of
-               []            -> Just v
-               [Location lo] -> Just v{location = Just lo}
-               _             -> Nothing
+testloc :: VEvent -> [Props] -> Maybe VEvent
+testloc v xs = case xs of
+                    []            -> Just v
+                    [Location lo] -> Just v{location = Just lo} 
+                    _             -> Nothing -- This only occurs when one of the optional properties occurs more than once.
 
 parseProp :: Parser Char Props
-parseProp = DtStamp     <$ token "DTSTAMP:"     <*> parseDTToEnd  <|>
-            Uid         <$ token "UID:"         <*> parseToEnd    <|>
-            DtStart     <$ token "DTSTART:"     <*> parseDTToEnd  <|>
-            DtEnd       <$ token "DTEND:"       <*> parseDTToEnd  <|>
-            Description <$ token "DESCRIPTION:" <*> parseToEnd    <|>
-            Summary     <$ token "SUMMARY:"     <*> parseToEnd    <|>
+parseProp = DtStamp     <$ token "DTSTAMP:"     <*> parseDTToEnd <|>
+            Uid         <$ token "UID:"         <*> parseToEnd   <|>
+            DtStart     <$ token "DTSTART:"     <*> parseDTToEnd <|>
+            DtEnd       <$ token "DTEND:"       <*> parseDTToEnd <|>
+            Description <$ token "DESCRIPTION:" <*> parseToEnd   <|>
+            Summary     <$ token "SUMMARY:"     <*> parseToEnd   <|>
             Location    <$ token "LOCATION:"    <*> parseToEnd
             where parseDTToEnd = parseDateTime <* token "\r\n"
             
@@ -205,20 +207,14 @@ printEvent (VEvent stamp uid start end des sum loc) = "BEGIN:VEVENT\r\nDTSTAMP:"
                                                       "\r\nUID:" ++ uid ++ 
                                                       "\r\nDTSTART:" ++ printDateTime start ++ 
                                                       "\r\nDTEND:" ++ printDateTime end ++ "\r\n" ++
-                                                      showdes ++
-                                                      showsum ++
-                                                      showloc ++
+                                                      showString "DESCRIPTION" des ++
+                                                      showString "SUMMARY"     sum ++
+                                                      showString "LOCATION"    loc ++
                                                       "END:VEVENT\r\n"
                                                       where
-                                                      showdes = case des of
-                                                                     Nothing -> ""
-                                                                     Just x -> "DESCRIPTION:" ++ x ++ "\r\n"
-                                                      showsum = case sum of
-                                                                     Nothing -> ""
-                                                                     Just x -> "SUMMARY:" ++ x ++ "\r\n"
-                                                      showloc = case loc of
-                                                                     Nothing -> ""
-                                                                     Just x -> "LOCATION:" ++ x ++ "\r\n"
+                                                      showString a b = case des of
+                                                                            Nothing -> ""
+                                                                            Just x  -> a ++ ":" ++ x ++ "\r\n"
                                                       
 
 -- printDateTime was copied from Part 1. This is the commentary added there:
@@ -265,11 +261,11 @@ checkOverlapping (Calendar _ e) = overlap e e > length e
 -- Recursive; for each event we check how many events are happening at that time. Since we check agains the entire list, we expect at least 1 hit (the event itself)
 overlap :: [VEvent] -> [VEvent] -> Int
 overlap [] _ = 0
-overlap (VEvent{dtStart}:xs) ys = length (filter id (map (inBetween dtStart) ys)) + overlap xs ys
+overlap (VEvent{dtStart}:xs) ys = (length . filter id) (map (inBetween dtStart) ys) + overlap xs ys
 
 -- Calculates the total time spent on events, in minutes
 timeSpent :: String -> Calendar -> Int
-timeSpent s (Calendar _ e) = sum (map eventTime (filter (filterEvent s) e))
+timeSpent s (Calendar _ e) = (sum . map eventTime) (filter (filterEvent s) e)
 
 -- Filters events matching the given summary
 filterEvent :: String -> VEvent -> Bool
@@ -287,14 +283,14 @@ totalDiff :: DateTime -> DateTime -> Int
 totalDiff (DateTime bd bt _) (DateTime ed et _) = dateDiff bd ed + timeDiff bt et
 
 dateDiff :: Date -> Date -> Int
-dateDiff bd@(Date y1 _ d1) ed@(Date y2 _ d2) = yearDiff y1 y2 + monthDiff  bd ed + dayDiff d1 d2
+dateDiff bd@(Date y1 _ d1) ed@(Date y2 _ d2) = yearDiff y1 y2 + monthDiff bd ed + dayDiff d1 d2
 
 -- Equal years result in no time, otherwise we add the amount of minutes one year takes, and we recursively call the function whilst adding 1 to the beginyear
 yearDiff :: Year -> Year -> Int
 yearDiff y1@(Year y) y2 | y1 == y2    = 0
                         | leapYear y1 = rem 366
                         | otherwise   = rem 365
-                        where rem n = n * 24 * 60 + yearDiff (Year (y+1)) y2
+                        where rem n = n * 24 * 60 + yearDiff (Year (y + 1)) y2
 
 -- Similar function to yearDiff, except that we now have to check whether the beginning month is earlier or later in the year.
 -- When the beginning date has an earlier month, we can simply add the time one month takes, otherwise we have to substract.                        
@@ -345,14 +341,14 @@ days (Date y (Month m) _) | m == 2 && leapYear y = 29
 
 -- Exercise 5
 ppMonth :: Year -> Month -> Calendar -> PP.Doc
-ppMonth y m c = PP.text (ppMonth2 (days (Date y m (Day 1))) (eventsMonth y m c))
+ppMonth y m c = PP.text (eventsInMonthToString (days (Date y m (Day 1))) (eventsMonth y m c))
 
-ppMonth2 :: Int -> [VEvent] -> String
-ppMonth2 m xs = intercalate ppLine (zipLists (map (ppDayLine m) [7 * k - 6 | k <- [1..5]]) (op3 m 1 xs))
+eventsInMonthToString :: Int -> [VEvent] -> String
+eventsInMonthToString m xs = intercalate ppLine (zipLists (map (ppDayLine m) [7 * k - 6 | k <- [1..5]]) (eventsInWeekToString m 1 xs))
 
-op3 :: Int -> Int -> [VEvent] -> [String]
-op3 m d xs | d > m = []
-           | otherwise = ppEvent d (sortOnWeek m (toTuples xs) !! (d `div` 7)) : op3 m (d + 7) xs 
+eventsInWeekToString :: Int -> Int -> [VEvent] -> [String]
+eventsInWeekToString m d xs | d > m = []
+                            | otherwise = ppEvent d (sortOnWeek m (toTuples xs) !! (d `div` 7)) : eventsInWeekToString m (d + 7) xs 
 
 zipLists :: [String] -> [String] -> [String] 
 zipLists [] [] = []
@@ -360,20 +356,21 @@ zipLists (x:xs) (y:ys) = (x ++ y) : zipLists xs ys
 
 -- Prints the following ---------------+---------------+ etc.
 ppLine :: String
-ppLine = tail (concat (replicate 7 ("+" ++ replicate 15 '-')))
+ppLine = (tail . concat . replicate 7) ("+" ++ replicate 15 '-')
 
 -- Prints the following  1             | 2             | etc.
 -- Since ppDay adds | to the beginning of every day, we have to take the tail of the list (remove the first |)
 ppDayLine :: Int -> Int -> String
-ppDayLine m n | m < n     = ' ' : tail (concat (replicate y ppEmptyDay))
-              | otherwise = tail (concatMap ppDay [n .. x]) ++ concat (replicate y ppEmptyDay)
+ppDayLine m n | m < n     = ' ' : tail rem
+              | otherwise = tail (concatMap ppDay [n .. x]) ++ rem
                        where
-                        x = min (n+6) m
+                        x = min (n + 6) m
                         y = n + 6 - x
+                        rem = (concat . replicate y) ppEmptyDay
 
 -- Prints a single day: | xx                                     
 ppDay :: Int -> String
-ppDay n = "| " ++ show n ++ replicate (14 - length (show n)) ' '
+ppDay n = "| " ++ show n ++ replicate (14 - (length . show) n) ' '
 
 -- Prints an empty day, to fill the calendar (days 32, 33 etc)
 ppEmptyDay :: String
@@ -401,17 +398,20 @@ ppEvent n es | n `mod` 7 == 1 && null es = ""
              z | n `mod` 7 == 1 = "\r\n"
                | otherwise = ""
              m | n < 7 = (n `mod` 7) + 1
-               | n `mod` 7 == 0 && null es = n `mod` 7 + ((n `div` 7) * 7) + 1
-               | n `mod` 7 == 0 && fst (head es) <= n = n - 7 + 1
+               | n `mod` 7 == 0 && null es = n `mod` 7 + (n `div` 7) * 7 + 1
+               | n `mod` 7 == 0 && (fst . head) es <= n = n - 6
                | otherwise = n `mod` 7 + ((n `div` 7) * 7) + 1
 
+-- Distribute the events among the weeks
 sortOnWeek :: Int -> [(Int, String)] -> [[(Int, String)]]
-sortOnWeek n xs = map (op n xs) [7*k-6 | k <- [1..5]]
+sortOnWeek n xs = map (inWeek n xs) [7 * k - 6 | k <- [1..5]]
 
-op :: Int -> [(Int, String)] -> Int -> [(Int, String)]
-op n xs week = filter f xs
+-- Filter all events that are not in a certain week
+inWeek :: Int -> [(Int, String)] -> Int -> [(Int, String)]
+inWeek n xs week = filter f xs
         where f (a,_) = a >= week && a < week + 7 && a <= n
 
+-- Convert VEvents to tuples with the day and the string that is to be outputted in the Calendar
 toTuples :: [VEvent] -> [(Int, String)]
 toTuples = foldr ((++) . toTuple) []
 
