@@ -31,7 +31,7 @@ tokens :-
     Asteroid                        { \s -> TAsteroid }
     Boundary                        { \s -> TBoundary }
     \_                              { \s -> TLDash }
-    Ident                           { \s -> TIdent s }
+    [$alpha $digit \+ \-]*          { \s -> TIdent s }
     
 {
 -- Each action has type :: String -> Token
