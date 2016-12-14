@@ -50,3 +50,11 @@ data Step  =  Done  Space Pos Heading
            |  Ok    ArrowState
            |  Fail  String
 
+data Program = Program [Rule]
+data Rule = Rule Ident Cmds
+data Cmds = Epsilon | Cmd [Cmd]
+data Cmd = Go | Take | Mark | Nothing | Turn Dir | Case Dir Alts | Id Ident
+data Dir = Left | Right | Front
+data Alts = Epsilon2 | Alts Alt [Alt]
+data Alt = Alt Pat Cmds
+data Pat = Empty2
