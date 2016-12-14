@@ -6,6 +6,7 @@ import Data.Map (Map)
 import qualified Data.Map as L
 import Control.Monad (replicateM)
 import Data.Char (isSpace)
+import Scanner
 
 
 type Space     =  Map Pos Contents
@@ -58,3 +59,7 @@ data Dir = Left | Right | Front
 data Alts = Epsilon2 | Alts Alt [Alt]
 data Alt = Alt Pat Cmds
 data Pat = Empty2
+
+main = do
+    s <- getContents
+    print (alexScanTokens s)
