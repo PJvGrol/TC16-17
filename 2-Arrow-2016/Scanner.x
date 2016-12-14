@@ -59,8 +59,8 @@ data Token =
     Ident
 
 data Ident = 
-    String Letter   |
-    Int Digit       |
-    +               |
+    Letter String  |
+    Digit Int      |
+    +              |
     -
 }
