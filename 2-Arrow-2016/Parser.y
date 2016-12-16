@@ -2,6 +2,8 @@
 module Main where
 }
 
+import Scanner
+
 %name calc
 %tokentype { Token }
 %error { parseError }
@@ -28,5 +30,7 @@ module Main where
         Asteroid    {TAsteroid}
         Boundary    {TBoundary}
         '_'         {TLDash}
-        Ident       {TIdent}
+        Ident       {TIdent $$}
         
+%%
+

@@ -6,7 +6,7 @@ import Data.Map (Map)
 import qualified Data.Map as L
 import Control.Monad (replicateM)
 import Data.Char (isSpace)
-import Scanner
+import Parser
 
 
 type Space     =  Map Pos Contents
@@ -60,10 +60,10 @@ data Alts = Epsilon2 | Alts Alt [Alt]
 data Alt = Alt Pat Cmds
 data Pat = Empty2
 
+
 main = do
     s <- getContents
-    print (alexScanTokens s)
-    
+    print (alexScanTokens s)    
 -- Exercise 4
 {-
     ".. Happy is more efficient at parsing left-recursive rules; they result in a constant stack-space parser, whereas right-recursive rules require stack space
