@@ -1,5 +1,8 @@
 {-# OPTIONS_GHC -w #-}
 module Main where
+
+import Data.Maybe
+import Data.Char
 import Control.Applicative(Applicative(..))
 import Control.Monad (ap)
 
@@ -266,7 +269,7 @@ happyReturn1 = \a tks -> (return) a
 happyError' :: () => [(Token)] -> HappyIdentity a
 happyError' = HappyIdentity . parseError
 
-calc tks = happyRunIdentity happySomeParser where
+parse tks = happyRunIdentity happySomeParser where
   happySomeParser = happyThen (happyParse action_0 tks) (\x -> case x of {HappyAbsSyn4 z -> happyReturn z; _other -> notHappyAtAll })
 
 happySeq = happyDontSeq
@@ -332,7 +335,7 @@ lexVar cs =
         ("in",rest) -> TokenIn : lexer rest
         (var,rest) -> TokenVar var : lexer rest
 
-main = getContents >>= print . calc . lexer
+main = getContents >>= print . parse . lexer
 {-# LINE 1 "templates\GenericTemplate.hs" #-}
 {-# LINE 1 "templates\\GenericTemplate.hs" #-}
 {-# LINE 1 "<built-in>" #-}

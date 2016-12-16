@@ -1,8 +1,11 @@
 {
 module Main where
+
+import Data.Maybe
+import Data.Char
 }
 
-%name calc
+%name parse
 %tokentype { Token }
 %error { parseError }
 

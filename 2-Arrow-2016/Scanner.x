@@ -1,5 +1,5 @@
 {
-module Scanner where
+module Scanner (scan) where
 }
 %wrapper "basic"
 
@@ -31,7 +31,7 @@ tokens :-
     Asteroid                        { \s -> TAsteroid }
     Boundary                        { \s -> TBoundary }
     \_                              { \s -> TLDash }
-    [$alpha $digit \+ \-]*          { \s -> TIdent s }
+    [$alpha $digit \+ \-]+          { \s -> TIdent s }
     
 {
 -- Each action has type :: String -> Token
@@ -61,4 +61,13 @@ data Token =
     TLDash       |
     TIdent String
     deriving (Show)
+
+main :: IO ()
+main = do
+        s <- getContents
+        print (alexScanTokens s)
+        
+scan = do
+        s <- getContents
+        print (alexScanTokens s)
 }

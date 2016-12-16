@@ -1,10 +1,11 @@
 {
-module Main where
+module Parser (parse) where
+import Scanner
 }
 
-import Scanner
 
-%name calc
+
+%name parse
 %tokentype { Token }
 %error { parseError }
 
@@ -33,4 +34,8 @@ import Scanner
         Ident       {TIdent $$}
         
 %%
+{
 
+
+
+}
