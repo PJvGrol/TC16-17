@@ -63,3 +63,16 @@ data Pat = Empty2
 main = do
     s <- getContents
     print (alexScanTokens s)
+    
+-- Exercise 4
+{-
+    ".. Happy is more efficient at parsing left-recursive rules; they result in a constant stack-space parser, whereas right-recursive rules require stack space
+    proportional to the length of the list being parsed. This can be extremely important where long sequences are involved, for instance in automatically
+    generated output. For example, the parser in GHC used to use right-recursion to parse lists, and as a result it failed to parse some Happy-generated 
+    modules due to running out of space."
+    "If a grammar is left-recursive, it has to be transformed into a non left-recursive grammar before we can construct a combinator parser."
+    So we can conclude that Happy can easily handle a left-recursive grammar, and might fail in the case of right-recursive grammars. That means that to
+    ensure all grammars are handled, any right-recursive grammar has to be transformed into a non right-recursive, or left-recursive grammar. Conversely,
+    parser combinators require the transformation of left-recursive grammars into non left-recursive grammars. Therefor we can conclude that parser combinators
+    and Happy require the exact opposite recursion.
+-}
