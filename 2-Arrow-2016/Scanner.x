@@ -37,7 +37,7 @@ tokens :-
 -- Each action has type :: String -> Token
 
 -- The token type:
-data Token =
+data TToken =
     TNext        |
     TDot         |
     TComma       |
