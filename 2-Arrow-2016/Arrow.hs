@@ -60,30 +60,7 @@ data Alts = Epsilon2 | Alts Alt [Alt]
 data Alt = Alt Pat Cmds
 data Pat = Empty2
 
-data Token =
-    Next        |
-    Dot         |
-    Comma       |
-    Go          |
-    Take        |
-    Mark        |
-    Nothing     |
-    Turn        |
-    Case        |
-    Of          |
-    End         |
-    Left        |
-    Right       |
-    Front       |
-    Semicolon   |
-    Empty       |
-    Lambda      |
-    Debris      |
-    Asteroid    |
-    Boundary    |
-    LDash       |
-    Ident String
-    deriving (Show)
+
 
 
 main = do
