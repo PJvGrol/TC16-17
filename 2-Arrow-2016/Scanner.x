@@ -1,5 +1,5 @@
 {
-module Scanner (scan) where
+module Scanner (scan, TToken(..)) where
 }
 %wrapper "basic"
 
@@ -62,12 +62,6 @@ data TToken =
     TIdent String
     deriving (Show)
 
-main :: IO ()
-main = do
-        s <- getContents
-        print (alexScanTokens s)
+scan = alexScanTokens
         
-scan = do
-        s <- getContents
-        print (alexScanTokens s)
 }

@@ -2,7 +2,7 @@
 {-# LANGUAGE CPP #-}
 {-# LINE 1 "Scanner.x" #-}
 
-module Main where
+module Scanner (scan, TToken(..)) where
 
 #if __GLASGOW_HASKELL__ >= 603
 #include "ghcconfig.h"
@@ -343,7 +343,7 @@ alex_accept = listArray (0::Int,94) [AlexAccNone,AlexAccNone,AlexAccNone,AlexAcc
 -- Each action has type :: String -> Token
 
 -- The token type:
-data Token =
+data TToken =
     TNext        |
     TDot         |
     TComma       |
@@ -368,10 +368,8 @@ data Token =
     TIdent String
     deriving (Show)
 
-main :: IO ()
-main = do
-        s <- getContents
-        print (alexScanTokens s)
+scan = alexScanTokens
+        
 
 alex_action_2 =  \s -> TNext 
 alex_action_3 =  \s -> TDot 

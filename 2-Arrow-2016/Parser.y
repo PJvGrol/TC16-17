@@ -1,16 +1,17 @@
 {
 module Parser (parse) where
 import Scanner
+import Prelude hiding (Left, Right)
 }
 
 
 
 %name parse
-%tokentype { Token }
+%tokentype { TToken }
 %error { parseError }
 
 %token
-        "->"        {TNext}
+        Next        {TNext}
         '.'         {TDot}
         ','         {TComma}
         go          {TGo}
@@ -35,12 +36,15 @@ import Scanner
         
 %%
 
-Rule  : 
+Program : {- empty -}       {[]}
+        | Program Rule      { $1 ++ [$2]  }
+
+Rule  : Ident Next Cmds '.' {Rule $1 $3}
 
 Ident : Id           { Ident $1 }
 
-Cmds  : Cmd          { [$1] }
-      | Cmds ',' Cmd { $3 : $1 }
+Cmds  : {- empty -}         { [] }
+      | Cmds ',' Cmd        { $1 ++ [$3] }
 
 Cmd   : go       { Go }
       | take     { Take }
@@ -48,16 +52,16 @@ Cmd   : go       { Go }
       | nothing  { Nothing2 }
       | turn Dir { Turn $2 }
       | case Dir of Alts end { Case $2 $4 }
-      | Id Ident { Ident $2 }
+      | Ident    { Id $1 }
       
 Dir   : left     { Left }
       | right    { Right }
       | front    { Front }
 
-Alts  : Alt          { [$1] }
-      | Alts ';' Alt { $3 : $1 }
+Alts  : {- empty -}         { [] }
+      | Alts ';' Alt        { $1 ++ [$3] }
       
-Alt   : Pat "->" Cmds { Alt $1 $3 }
+Alt   : Pat Next Cmds { Alt $1 $3 }
 
 Pat   : Empty         { PEmpty }
       | Lambda        { PLambda }
@@ -67,35 +71,14 @@ Pat   : Empty         { PEmpty }
       | '_'           { PDash }
       
 {
-{-
-data Token =
-    Next        |
-    Dot         |
-    Comma       |
-    Go          |
-    Take        |
-    Mark        |
-    Nothing     |
-    Turn        |
-    Case        |
-    Of          |
-    End         |
-    Left        |
-    Right       |
-    Front       |
-    Semicolon   |
-    Empty       |
-    Lambda      |
-    Debris      |
-    Asteroid    |
-    Boundary    |
-    LDash       |
-    Id String
-    deriving (Show)-}
 
-data Ident = String
+parseError :: [TToken] -> a
+parseError _ = error "Parse error"
 
-data Program = Program [Rule]
+
+data Ident = Ident String
+
+type Program = [Rule]
 data Rule = Rule Ident Cmds
 type Cmds = [Cmd]
 data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident

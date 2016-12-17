@@ -1,13 +1,37 @@
 module Arrow where
 
 import Prelude hiding ((<*), (<$))
-import ParseLib.Abstract
+import ParseLib.Abstract hiding (parse)
 import Data.Map (Map)
 import qualified Data.Map as L
 import Control.Monad (replicateM)
 import Data.Char (isSpace)
 import Parser
-
+import Scanner
+{-data Token =
+    Next        |
+    Dot         |
+    Comma       |
+    Go          |
+    Take        |
+    Mark        |
+    Nothing     |
+    Turn        |
+    Case        |
+    Of          |
+    End         |
+    Left        |
+    Right       |
+    Front       |
+    Semicolon   |
+    Empty       |
+    Lambda      |
+    Debris      |
+    Asteroid    |
+    Boundary    |
+    LDash       |
+    Id String
+    deriving (Show)-}
 
 type Space     =  Map Pos Contents
 type Size      =  Int
@@ -65,7 +89,7 @@ data Pat = Empty2
 
 main = do
     s <- getContents
-    print (alexScanTokens s)    
+    print ((parse.scan) s)    
 -- Exercise 4
 {-
     ".. Happy is more efficient at parsing left-recursive rules; they result in a constant stack-space parser, whereas right-recursive rules require stack space
