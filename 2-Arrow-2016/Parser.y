@@ -1,12 +1,12 @@
 {
-module Parser (parse) where
+module Parser (parsehap, Program, Rule(..), Cmds, Cmd(..),Dir(..), Alts, Alt(..), Pat(..)) where
 import Scanner
 import Prelude hiding (Left, Right)
 }
 
 
 
-%name parse
+%name parsehap
 %tokentype { TToken }
 %error { parseError }
 
@@ -76,15 +76,15 @@ parseError :: [TToken] -> a
 parseError _ = error "Parse error"
 
 
-data Ident = Ident String
+data Ident = Ident String deriving (Show)
 
 type Program = [Rule]
-data Rule = Rule Ident Cmds
+data Rule = Rule Ident Cmds deriving (Show)
 type Cmds = [Cmd]
-data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident
-data Dir = Left | Right | Front
+data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident deriving (Show)
+data Dir = Left | Right | Front deriving (Show)
 type Alts = [Alt]
-data Alt = Alt Pat Cmds
-data Pat = PEmpty | PLambda | PDebris | PAsteroid | PBoundary | PDash
+data Alt = Alt Pat Cmds deriving (Show)
+data Pat = PEmpty | PLambda | PDebris | PAsteroid | PBoundary | PDash deriving (Show)
 
 }

@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -w #-}
-module Parser (parse) where
+module Parser (parsehap, Program, Rule(..), Cmds, Cmd(..),Dir(..), Alts, Alt(..), Pat(..)) where
 import Scanner
 import Prelude hiding (Left, Right)
 import Control.Applicative(Applicative(..))
@@ -364,7 +364,7 @@ happyReturn1 = \a tks -> (return) a
 happyError' :: () => [(TToken)] -> HappyIdentity a
 happyError' = HappyIdentity . parseError
 
-parse tks = happyRunIdentity happySomeParser where
+parsehap tks = happyRunIdentity happySomeParser where
   happySomeParser = happyThen (happyParse action_0 tks) (\x -> case x of {HappyAbsSyn4 z -> happyReturn z; _other -> notHappyAtAll })
 
 happySeq = happyDontSeq
@@ -374,16 +374,16 @@ parseError :: [TToken] -> a
 parseError _ = error "Parse error"
 
 
-data Ident = Ident String
+data Ident = Ident String deriving (Show)
 
 type Program = [Rule]
-data Rule = Rule Ident Cmds
+data Rule = Rule Ident Cmds deriving (Show)
 type Cmds = [Cmd]
-data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident
-data Dir = Left | Right | Front
+data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident deriving (Show)
+data Dir = Left | Right | Front deriving (Show)
 type Alts = [Alt]
-data Alt = Alt Pat Cmds
-data Pat = PEmpty | PLambda | PDebris | PAsteroid | PBoundary | PDash
+data Alt = Alt Pat Cmds deriving (Show)
+data Pat = PEmpty | PLambda | PDebris | PAsteroid | PBoundary | PDash deriving (Show)
 {-# LINE 1 "templates\GenericTemplate.hs" #-}
 {-# LINE 1 "templates\\GenericTemplate.hs" #-}
 {-# LINE 1 "<built-in>" #-}
