@@ -62,11 +62,11 @@ contentsTable =
   [  (Empty,'.'),(Lambda,'\\'),(Debris,'%'),(Asteroid,'O'),(Boundary,'#')]
 
 -- These three should be defined by you
-type Ident = ()
+--type Ident = ()
 type Commands = ()
 type Heading = ()
 
-type Environment = Map Ident Commands
+type Environment = Map (Parser.Ident) Commands
 
 type Stack       =  Commands
 data ArrowState  =  ArrowState Space Pos Heading Stack
@@ -114,11 +114,25 @@ main = do
 
 -- Exercise 5
 
-type AlgebraProgram p r c a = ([r] -> p, Ident -> [c] -> r, Dir -> c, Dir -> [a] -> c, Ident -> c, Pat -> [c] -> a)
+type AlgebraProgram p r c a = ([r] -> p,
+                               Parser.Ident -> [c] -> r,
+                               c, c, c, c,
+                               Dir -> c,
+                               Dir -> [a] -> c,
+                               Parser.Ident -> c,
+                               Pat -> [c] -> a)
 foldProgram :: AlgebraProgram p r c a -> Program -> p
-foldProgram (rule, id,dir,dir2,id2,pat) = f
-            where f xs = rule (map f' xs)
-                  f' i ys = id i ys 
+foldProgram (prog,rule,go,take,mark,not,turn,cas,id,alt) = f
+            where f xs = prog (map f' xs)
+                  f' (Rule ident cmds) = rule ident (map f'' cmds)
+                  f'' Go = go
+                  f'' Take = take
+                  f'' Mark = mark
+                  f'' Nothing2 = not
+                  f'' (Turn d) = turn d
+                  f'' (Case d alts) = cas d (map f''' alts)
+                  f'' (Id ident) = id ident
+                  f''' (Alt p cmds) = alt p (map f'' cmds)
             
 -- Exercise 6
 check :: Program -> Bool

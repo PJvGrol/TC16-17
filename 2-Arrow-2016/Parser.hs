@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -w #-}
-module Parser (parsehap, Program, Rule(..), Cmds, Cmd(..),Dir(..), Alts, Alt(..), Pat(..)) where
+module Parser (parsehap, Program, Rule(..), Cmds, Cmd(..),Dir(..), Alts, Alt(..), Pat(..), Ident(..)) where
 import Scanner
 import Prelude hiding (Left, Right)
 import Control.Applicative(Applicative(..))
