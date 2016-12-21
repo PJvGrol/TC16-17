@@ -86,13 +86,13 @@ data Pat = Empty2
 
 data Ident = Ident String deriving (Show)
 
---type Program = [Rule]
---data Rule = Rule Ident Cmds deriving (Show)
+type Program = [Rule]
+data Rule = Rule Ident Cmds deriving (Show)
 type Cmds = [Cmd]
---data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident deriving (Show)
+data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident deriving (Show)
 data Dir = Left | Right | Front deriving (Show)
 type Alts = [Alt]
---data Alt = Alt Pat Cmds deriving (Show)
+data Alt = Alt Pat Cmds deriving (Show)
 data Pat = PEmpty | PLambda | PDebris | PAsteroid | PBoundary | PDash deriving (Show)
 -}
 main = do
@@ -115,9 +115,10 @@ main = do
 -- Exercise 5
 
 type AlgebraProgram p r c a = ([r] -> p, Ident -> [c] -> r, Dir -> c, Dir -> [a] -> c, Ident -> c, Pat -> [c] -> a)
-foldProgram :: AlgebraProgram p -> Program -> p
-foldProgram (rule, _,_,_,_,_) = f
-            where f xs = rule xs
+foldProgram :: AlgebraProgram p r c a -> Program -> p
+foldProgram (rule, id,dir,dir2,id2,pat) = f
+            where f xs = rule (map f' xs)
+                  f' i ys = id i ys 
             
 -- Exercise 6
 check :: Program -> Bool
