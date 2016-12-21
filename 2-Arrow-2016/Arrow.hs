@@ -75,21 +75,30 @@ data Step  =  Done  Space Pos Heading
            |  Ok    ArrowState
            |  Fail  String
 
-data Program = Program [Rule]
-data Rule = Rule Ident Cmds
+{---data Program = Program [Rule]
+--data Rule = Rule Ident Cmds
 data Cmds = Epsilon | Cmd [Cmd]
-data Cmd = Go | Take | Mark | Nothing | Turn Dir | Case Dir Alts | Id Ident
+--data Cmd = Go | Take | Mark | Nothing | Turn Dir | Case Dir Alts | Id Ident
 data Dir = Left | Right | Front
 data Alts = Epsilon2 | Alts Alt [Alt]
-data Alt = Alt Pat Cmds
+--data Alt = Alt Pat Cmds
 data Pat = Empty2
 
+data Ident = Ident String deriving (Show)
 
-
-
+--type Program = [Rule]
+--data Rule = Rule Ident Cmds deriving (Show)
+type Cmds = [Cmd]
+--data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident deriving (Show)
+data Dir = Left | Right | Front deriving (Show)
+type Alts = [Alt]
+--data Alt = Alt Pat Cmds deriving (Show)
+data Pat = PEmpty | PLambda | PDebris | PAsteroid | PBoundary | PDash deriving (Show)
+-}
 main = do
     s <- getContents
-    print ((parse.scan) s)  
+    print ((parsehap.scan) s)
+
 -- Exercise 4
 {-
     ".. Happy is more efficient at parsing left-recursive rules; they result in a constant stack-space parser, whereas right-recursive rules require stack space
@@ -105,10 +114,10 @@ main = do
 
 -- Exercise 5
 
-type AlgebraProgram p = ([Rule] -> p)
+type AlgebraProgram p r c a = ([r] -> p, Ident -> [c] -> r, Dir -> c, Dir -> [a] -> c, Ident -> c, Pat -> [c] -> a)
 foldProgram :: AlgebraProgram p -> Program -> p
-foldProgram (rule) = f
-            where f (Program xs) = rule xs
+foldProgram (rule, _,_,_,_,_) = f
+            where f xs = rule xs
             
 -- Exercise 7
 
