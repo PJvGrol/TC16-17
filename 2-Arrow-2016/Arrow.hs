@@ -119,6 +119,10 @@ foldProgram :: AlgebraProgram p -> Program -> p
 foldProgram (rule, _,_,_,_,_) = f
             where f xs = rule xs
             
+-- Exercise 6
+check :: Program -> Bool
+check = undefined
+            
 -- Exercise 7
 
 printSpace :: Space -> String
@@ -136,3 +140,7 @@ printContent Lambda = '\\'
 printContent Debris = '%'
 printContent Asteroid = 'o'
 printContent Boundary = '#'
+
+-- Exercise 8
+toEnvironment :: String -> Environment
+toEnvironment s = check ((parsehap . scan) s)
