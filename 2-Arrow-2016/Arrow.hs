@@ -102,3 +102,10 @@ main = do
     parser combinators require the transformation of left-recursive grammars into non left-recursive grammars. Therefor we can conclude that parser combinators
     and Happy require the exact opposite recursion.
 -}
+
+-- Exercise 5
+
+type AlgebraProgram p = ([Rule] -> p)
+foldProgram :: AlgebraProgram p -> Program -> p
+foldProgram (rule) = f
+            where f (Program xs) = rule xs
