@@ -89,7 +89,7 @@ data Pat = Empty2
 
 main = do
     s <- getContents
-    print ((parse.scan) s)    
+    print ((parse.scan) s)  
 -- Exercise 4
 {-
     ".. Happy is more efficient at parsing left-recursive rules; they result in a constant stack-space parser, whereas right-recursive rules require stack space
@@ -118,7 +118,7 @@ printSpace sp = concat (map f ls)
               ls = L.toList sp
               maxx = fst (fst (L.findMax sp))
               maxy = snd (fst (L.findMax sp))
-              f x | fst (fst x) /= 0 && fst (fst x) `mod` maxx == 0 = printContent (snd x) : ['\n']
+              f x | (fst (fst x) + 1) `mod` (maxx + 1) == 0 = printContent (snd x) : ['\n']
                   | otherwise = [printContent (snd x)]
 
 printContent :: Contents -> Char
