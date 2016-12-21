@@ -158,4 +158,20 @@ printContent Boundary = '#'
 
 -- Exercise 8
 toEnvironment :: String -> Environment
-toEnvironment s = check ((parsehap . scan) s)
+toEnvironment s = f
+                where
+                rs = (parsehap . scan) s
+                c = check rs
+                f | c = progToEnv rs
+                  | otherwise = L.empty
+                  
+progToEnv :: Program -> Environment
+progToEnv p = L.empty
+
+-- Exercise 9
+step :: Environment -> ArrowState -> Step
+step env (ArrowState sp pos hd st) | stackIsEmpty st = Done sp pos hd
+                                   | otherwise = undefined
+
+stackIsEmpty :: Stack -> Bool
+stackIsEmpty st = True 
