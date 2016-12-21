@@ -85,7 +85,7 @@ data Alts = Epsilon2 | Alts Alt [Alt]
 data Pat = Empty2
 
 data Ident = Ident String deriving (Show)
-
+[Rule (Ident "asd") [], Rule (Ident "start") [], Rule (Ident "asdf") []]
 type Program = [Rule]
 data Rule = Rule Ident Cmds deriving (Show)
 type Cmds = [Cmd]
@@ -135,9 +135,29 @@ foldProgram (prog,rule,go,take,mark,not,turn,cas,id,alt) = f
                   f''' (Alt p cmds) = alt p (map f'' cmds)
             
 -- Exercise 6
-check :: Program -> Bool
-check = undefined
-            
+check :: Program -> [(String, [String])]
+check = foldProgram (prog,rule,go,take,mark,not,turn,cas,id,alt)
+            where
+                prog xs = xs
+                --prog xs = elem "start" (rules xs) && removedup (rules xs) && (checkrules (rules xs) (map snd xs) || map snd xs /= [])
+                --rule (Ident name) ys = (name, concat ys)
+                go = []
+                take = []
+                mark = []
+                not = []
+                turn _ = []
+                cas _ _ = []
+                id (Ident s) = [s]
+                alt _ _ = True
+                removedup [x] = True
+                removedup (x:xs) = notElem x xs && removedup xs
+                rules = map fst
+                calls = map snd
+                checkrules rules [] = True
+                checkrules rules [call] = elem call rules
+                checkrules rules (call:calls) = elem call rules && checkrules rules calls
+                
+rule (Ident name) ys = (name, concat ys)        
 -- Exercise 7
 
 printSpace :: Space -> String
@@ -157,5 +177,5 @@ printContent Asteroid = 'o'
 printContent Boundary = '#'
 
 -- Exercise 8
-toEnvironment :: String -> Environment
-toEnvironment s = check ((parsehap . scan) s)
+--toEnvironment :: String -> Environment
+--toEnvironment s = check ((parsehap . scan) s)
