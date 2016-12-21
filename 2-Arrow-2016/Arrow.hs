@@ -115,5 +115,23 @@ main = do
 
 type AlgebraProgram p r c a = ([r] -> p, Ident -> [c] -> r, Dir -> c, Dir -> [a] -> c, Ident -> c, Pat -> [c] -> a)
 foldProgram :: AlgebraProgram p -> Program -> p
-foldProgram (rule, ) = f
+foldProgram (rule, _,_,_,_,_) = f
             where f xs = rule xs
+            
+-- Exercise 7
+
+printSpace :: Space -> String
+printSpace sp = concat (map f ls)
+              where
+              ls = L.toList sp
+              maxx = fst (fst (L.findMax sp))
+              maxy = snd (fst (L.findMax sp))
+              f x | fst (fst x) /= 0 && fst (fst x) `mod` maxx == 0 = printContent (snd x) : ['\n']
+                  | otherwise = [printContent (snd x)]
+
+printContent :: Contents -> Char
+printContent Empty = '.'
+printContent Lambda = '\\'
+printContent Debris = '%'
+printContent Asteroid = 'o'
+printContent Boundary = '#'
