@@ -161,7 +161,7 @@ happyReduction_3 (_ `HappyStk`
 happyReduce_4 = happySpecReduce_1  6 happyReduction_4
 happyReduction_4 (HappyTerminal (TIdent happy_var_1))
 	 =  HappyAbsSyn6
-		 (Ident happy_var_1
+		 (happy_var_1
 	)
 happyReduction_4 _  = notHappyAtAll 
 
@@ -374,7 +374,7 @@ parseError :: [TToken] -> a
 parseError _ = error "Parse error"
 
 
-data Ident = Ident String deriving (Show)
+type Ident = String
 
 type Program = [Rule]
 data Rule = Rule Ident Cmds deriving (Show)
@@ -383,7 +383,7 @@ data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident der
 data Dir = Left | Right | Front deriving (Show)
 type Alts = [Alt]
 data Alt = Alt Pat Cmds deriving (Show)
-data Pat = PEmpty | PLambda | PDebris | PAsteroid | PBoundary | PDash deriving (Show)
+data Pat = PEmpty | PLambda | PDebris | PAsteroid | PBoundary | PDash deriving (Eq,Show)
 {-# LINE 1 "templates\GenericTemplate.hs" #-}
 {-# LINE 1 "templates\\GenericTemplate.hs" #-}
 {-# LINE 1 "<built-in>" #-}

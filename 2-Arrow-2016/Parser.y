@@ -41,7 +41,7 @@ Program : {- empty -}       {[]}
 
 Rule  : Ident Next Cmds '.' {Rule $1 $3}
 
-Ident : Id           { Ident $1 }
+Ident : Id           { $1 }
 
 Cmds  : {- empty -}         { [] }
       | Cmds ',' Cmd        { $1 ++ [$3] }
@@ -76,7 +76,7 @@ parseError :: [TToken] -> a
 parseError _ = error "Parse error"
 
 
-data Ident = Ident String deriving (Show)
+type Ident = String
 
 type Program = [Rule]
 data Rule = Rule Ident Cmds deriving (Show)
@@ -85,6 +85,6 @@ data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident der
 data Dir = Left | Right | Front deriving (Show)
 type Alts = [Alt]
 data Alt = Alt Pat Cmds deriving (Show)
-data Pat = PEmpty | PLambda | PDebris | PAsteroid | PBoundary | PDash deriving (Show)
+data Pat = PEmpty | PLambda | PDebris | PAsteroid | PBoundary | PDash deriving (Eq,Show)
 
 }

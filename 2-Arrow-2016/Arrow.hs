@@ -85,7 +85,7 @@ data Alts = Epsilon2 | Alts Alt [Alt]
 data Pat = Empty2
 
 data Ident = Ident String deriving (Show)
-[Rule (Ident "asd") [], Rule (Ident "start") [], Rule (Ident "asdf") []]
+[Rule (Ident "asd") [], Rule (Ident "start") [], Rule (Ident "asdf") [Id (Ident "asd"),Go]]
 type Program = [Rule]
 data Rule = Rule Ident Cmds deriving (Show)
 type Cmds = [Cmd]
@@ -135,29 +135,33 @@ foldProgram (prog,rule,go,take,mark,not,turn,cas,id,alt) = f
                   f''' (Alt p cmds) = alt p (map f'' cmds)
             
 -- Exercise 6
-check :: Program -> [(String, [String])]
+check :: Program -> Bool
 check = foldProgram (prog,rule,go,take,mark,not,turn,cas,id,alt)
             where
-                prog xs = xs
-                --prog xs = elem "start" (rules xs) && removedup (rules xs) && (checkrules (rules xs) (map snd xs) || map snd xs /= [])
+                --prog xs = concat(map snd xs)
+                prog xs = elem "start" (rules xs) && removedup (rules xs) && (checkrules ("":(map fst xs)) (concat(map (fst.snd) xs)) || map (fst.snd) xs == [])
                 --rule (Ident name) ys = (name, concat ys)
-                go = []
-                take = []
-                mark = []
-                not = []
-                turn _ = []
-                cas _ _ = []
-                id (Ident s) = [s]
-                alt _ _ = True
+                go = ([],True)
+                take = ([],True)
+                mark = ([],True)
+                not = ([],True)
+                turn _ = ([],True)
+                cas _ xs = ([],pats xs)
+                id s = (s,True)
+                alt x _ = x
                 removedup [x] = True
                 removedup (x:xs) = notElem x xs && removedup xs
                 rules = map fst
                 calls = map snd
-                checkrules rules [] = True
-                checkrules rules [call] = elem call rules
-                checkrules rules (call:calls) = elem call rules && checkrules rules calls
+                pats xs = elem PDash xs
+                pat (Alt x _) = x
                 
-rule (Ident name) ys = (name, concat ys)        
+
+checkrules rules [] = True
+checkrules rules [call] = elem call rules
+checkrules rules (call:calls) = elem call rules && checkrules rules calls
+                
+rule name ys = (name, ys)        
 -- Exercise 7
 
 printSpace :: Space -> String
@@ -178,14 +182,14 @@ printContent Boundary = '#'
 
 -- Exercise 8
 
-toEnvironment :: String -> Environment
+{-toEnvironment :: String -> Environment
 toEnvironment s = f
                 where
                 rs = (parsehap . scan) s
                 c = check rs
                 f | c = progToEnv rs
                   | otherwise = L.empty
-                  
+-}                  
 progToEnv :: Program -> Environment
 progToEnv p = L.empty
 
