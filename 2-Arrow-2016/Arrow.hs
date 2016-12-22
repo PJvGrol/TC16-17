@@ -8,6 +8,7 @@ import Control.Monad (replicateM)
 import Data.Char (isSpace)
 import Parser
 import Scanner
+import Data.Maybe
 {-data Token =
     Next        |
     Dot         |
@@ -64,9 +65,9 @@ contentsTable =
 -- These three should be defined by you
 --type Ident = ()
 type Commands = ()
-type Heading = ()
+type Heading = (Int, Int)
 
-type Environment = Map (Parser.Ident) Commands
+type Environment = Map (Parser.Ident) Cmds
 
 type Stack       =  Commands
 data ArrowState  =  ArrowState Space Pos Heading Stack
@@ -178,21 +179,31 @@ printContent Boundary = '#'
 
 -- Exercise 8
 
+--data Rule = Rule Ident Cmds
 toEnvironment :: String -> Environment
 toEnvironment s = f
                 where
                 rs = (parsehap . scan) s
                 c = check rs
-                f | c = progToEnv rs
+                f | c = foldr (\(Rule i c) -> L.insert i c) L.empty rs
                   | otherwise = L.empty
-                  
-progToEnv :: Program -> Environment
-progToEnv p = L.empty
 
 -- Exercise 9
 step :: Environment -> ArrowState -> Step
 step env (ArrowState sp pos hd st) | stackIsEmpty st = Done sp pos hd
                                    | otherwise = undefined
+                                   
+newPos :: Pos -> Pos -> Pos
+newPos (a, b) (c, d) = (a + c, b + d)
+
+validGo :: Space ->  Pos -> Heading -> Bool
+validGo sp po he = undefined --f k
+                   where
+                   k = L.lookup (newPos po he) sp
+                   l = printContent (fromJust k)
+                   f x | isNothing x = False
+                       | l == '.' || l == '\\' || l == '%' = True
+                       | otherwise = False
 
 stackIsEmpty :: Stack -> Bool
 stackIsEmpty st = True 
