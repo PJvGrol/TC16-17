@@ -63,28 +63,18 @@ contentsTable =
   [  (Empty,'.'),(Lambda,'\\'),(Debris,'%'),(Asteroid,'O'),(Boundary,'#')]
 
 -- These three should be defined by you
---type Ident = ()
-type Commands = ()
 type Heading = (Int, Int)
 
 type Environment = Map (Parser.Ident) Cmds
 
-type Stack       =  Commands
+type Stack       =  Cmds
 data ArrowState  =  ArrowState Space Pos Heading Stack
 
 data Step  =  Done  Space Pos Heading
            |  Ok    ArrowState
            |  Fail  String
 
-{---data Program = Program [Rule]
---data Rule = Rule Ident Cmds
-data Cmds = Epsilon | Cmd [Cmd]
---data Cmd = Go | Take | Mark | Nothing | Turn Dir | Case Dir Alts | Id Ident
-data Dir = Left | Right | Front
-data Alts = Epsilon2 | Alts Alt [Alt]
---data Alt = Alt Pat Cmds
-data Pat = Empty2
-
+{-
 data Ident = Ident String deriving (Show)
 [Rule (Ident "asd") [], Rule (Ident "start") [], Rule (Ident "asdf") [Id (Ident "asd"),Go]]
 type Program = [Rule]
@@ -162,7 +152,8 @@ checkrules rules [] = True
 checkrules rules [call] = elem call rules
 checkrules rules (call:calls) = elem call rules && checkrules rules calls
                 
-rule name ys = (name, ys)        
+rule name ys = (name, ys)
+    
 -- Exercise 7
 
 printSpace :: Space -> String
@@ -182,32 +173,24 @@ printContent Asteroid = 'o'
 printContent Boundary = '#'
 
 -- Exercise 8
-
-{-
---data Rule = Rule Ident Cmds
 toEnvironment :: String -> Environment
-
 toEnvironment s = f
                 where
                 rs = (parsehap . scan) s
                 c = check rs
                 f | c = foldr (\(Rule i c) -> L.insert i c) L.empty rs
                   | otherwise = L.empty
--}                  
-progToEnv :: Program -> Environment
-progToEnv p = L.empty
-
 
 -- Exercise 9
 step :: Environment -> ArrowState -> Step
 step env (ArrowState sp pos hd st) | stackIsEmpty st = Done sp pos hd
                                    | otherwise = undefined
-                                   
+
 newPos :: Pos -> Pos -> Pos
 newPos (a, b) (c, d) = (a + c, b + d)
 
 validGo :: Space ->  Pos -> Heading -> Bool
-validGo sp po he = undefined --f k
+validGo sp po he = f k
                    where
                    k = L.lookup (newPos po he) sp
                    l = printContent (fromJust k)
@@ -216,5 +199,22 @@ validGo sp po he = undefined --f k
                        | otherwise = False
 
 stackIsEmpty :: Stack -> Bool
-stackIsEmpty st = True 
+stackIsEmpty [] = False
+stackIsEmpty (x:_) = True
 
+updateSpace :: Space -> Pos -> Contents -> Space
+updateSpace sp pos cnt = L.update f pos sp
+                    where
+                    f x = Just cnt
+                    
+-- Exercise 11
+interactive :: Environment -> ArrowState -> IO ()
+interactive env ast = f (step env ast)
+                    where
+                    f (Done sp _ _)= do putStrLn (printSpace sp)
+                    f (Ok ast@(ArrowState sp _ _ _)) = do putStrLn (printSpace sp)
+                                                          interactive env ast
+                    f (Fail str) = do putStrLn (str)
+
+interactive' :: Environment -> ArrowState -> IO ()
+interactive' env ast = undefined
