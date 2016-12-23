@@ -145,26 +145,7 @@ check :: Program -> Bool
 check prog = elem "start" (fst3 tuple) && testdup (fst3 tuple) && checkrules (fst3 tuple) (snd3 tuple) && thd3 tuple
       where tuple = foldProgram f prog
             testdup [x] = True
-            testdup (x:xs) = notElem x xs && testdup xs
-{-check = foldProgram (prog,rule,go,take,mark,not,turn,cas,id,alt)
-            where
-                --prog xs = concat(map snd xs)
-                prog xs = elem "start" (rules xs) && removedup (rules xs) && (checkrules ("":(map fst xs)) (concat(map fst (map snd xs))) || map fst (map snd xs) == [])
-                --rule (Ident name) ys = (name, concat ys)
-                go = ([],True)
-                take = ([],True)
-                mark = ([],True)
-                not = ([],True)
-                turn _ = ([],True)
-                cas _ xs = ([],pats xs)
-                id s = (s,True)
-                alt x _ = x
-
-                rules = map fst
-                calls = map snd
-                pats xs = elem PDash xs
-                pat (Alt x _) = x-}
-                
+            testdup (x:xs) = notElem x xs && testdup xs                
 
 f:: AlgebraProgram ([Ident],[Ident],Bool) (Ident,[Ident],Bool) ([Ident],Bool) (Pat, [Ident], Bool) 
 f = (\xs -> (rules xs,(removeduplicates.concat) (calls xs),and (map thd3 xs)),
@@ -202,7 +183,7 @@ rule name ys = (name, ys)
 -- Exercise 7
 
 printSpace :: Space -> String
-printSpace sp = concat (map f ls)
+printSpace sp = show (fst (L.findMax sp)) ++ concat (map f ls)
               where
               ls = L.toList sp
               maxx = fst (fst (L.findMax sp))
@@ -313,9 +294,10 @@ turn Left x = (x - 1) `mod` 4
 turn Right x = (x + 1) `mod` 4
 turn Front x = x
 
---data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident deriving (Show)
-
---data Dir = Left | Right | Front deriving (Show)
+-- Exercise 10
+{-
+    
+-}
                     
 -- Exercise 11
 interactive :: Environment -> ArrowState -> IO ()
