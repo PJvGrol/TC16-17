@@ -60,7 +60,7 @@ data Step  =  Done  Space Pos Heading
 
 main = do
     s <- readFile "Add.Arrow"
-    print $ check $ parsehap $ alexScanTokens s
+    print $ parsehap $ alexScanTokens s
 
 scan :: IO()    
 scan = do

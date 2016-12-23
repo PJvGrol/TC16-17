@@ -39,22 +39,22 @@ import Prelude hiding (Left, Right)
 Program : {- empty -}       {[]}
         | Program Rule      { $1 ++ [$2]  }
 
-Rule  : Ident Next Cmds '.' {Rule $1 $3}
+Rule  : Ident Next Cmds '.' {Rule $1 (reverse $3) }
 
 Ident : Id           { $1 }
 
 Cmds  : {- empty -}         { [] }
-      | Cmd Cmds2       { $1 : $2 }
+      | Cmds2 Cmd      { $2 : $1 }
 
 Cmds2 : {-empty -}    {[]}
-      | ',' Cmd Cmds2   { $2 : $3 }
+      | Cmds2 Cmd ','    { $2 : $1 }
 
 Cmd   : go       { Go }
       | take     { Take }
       | mark     { Mark }
       | nothing  { Nothing2 }
       | turn Dir { Turn $2 }
-      | case Dir of Alts end { Case $2 $4 }
+      | case Dir of Alts end { Case $2 (reverse $4) }
       | Ident    { Id $1 }
       
 Dir   : left     { Left }
@@ -62,11 +62,12 @@ Dir   : left     { Left }
       | front    { Front }
 
 Alts  : {- empty -}         { [] }
-      | Alt Alts2       { $1 : $2 }
+      | Alts2 Alt      { $2 : $1 }
 
 Alts2 : {- empty -}         {[]}
-      | ';' Alt Alts2       {$2 : $3}
-Alt   : Pat Next Cmds { Alt $1 $3 }
+      | Alts2 Alt ';'       {$2 : $1}
+      
+Alt   : Pat Next Cmds { Alt $1 (reverse $3) }
 
 Pat   : Empty         { PEmpty }
       | Lambda        { PLambda }
