@@ -1,3 +1,5 @@
+{-# LANGUAGE DisambiguateRecordFields, NamedFieldPuns #-}
+
 module Main where
 
 import Prelude hiding ((<*), (<$),Left,Right)
@@ -15,7 +17,7 @@ import Debug.Trace
 type Space     =  Map Pos Contents
 type Size      =  Int
 type Pos       =  (Int, Int)
-data Contents  =  Empty | Lambda | Debris | Asteroid | Boundary
+data Contents  =  Empty | Lambda | Debris | Asteroid | Boundary deriving (Eq)
 
 parseSpace :: Parser Char Space
 parseSpace =
@@ -81,6 +83,7 @@ scan = do
 -}
 
 -- Exercise 5
+-- Algebra and fold are pretty straight forward
 type AlgebraProgram p r c a = ([r] -> p,
                                Parser.Ident -> [c] -> r,
                                c, c, c, c,
@@ -108,16 +111,20 @@ check :: Program -> Bool
 check prog = elem "start" (fst3 tuple) && testdup (fst3 tuple) && checkrules (fst3 tuple) (snd3 tuple) && thd3 tuple
       where tuple = foldProgram f prog
             testdup [x] = True
-            testdup (x:xs) = notElem x xs && testdup xs                
+            testdup (x:xs) = notElem x xs && testdup xs 
+            checkrules rules [] = True
+            checkrules rules [call] = elem call rules
+            checkrules rules (call:calls) = elem call rules && checkrules rules calls
 
+-- Folds a Program to a datatype that check can use.
 f:: AlgebraProgram ([Ident],[Ident],Bool) (Ident,[Ident],Bool) ([Ident],Bool) (Pat, [Ident], Bool) 
 f = (\xs -> (mf3 xs,remdupc (ms3 xs),and (mt3 xs)),
-     \s ys -> (s, remdupc (map fst ys), and (map snd ys)),
-     ([],True),([],True),([],True),([],True),
-     \s -> ([],True),
+     \s ys -> (s, remdupc (mf ys), and (ms ys)),
+     e,e,e,e,
+     \t -> e,
      \dir alts -> (remdupc (ms3 alts),(elem PDash (mf3 alts) || containsall (mf3 alts)) && and (mt3 alts)),
      \s ->([s],True),
-     \pat cmds -> (pat,remdupc $ mf cmds, and $ ms cmds)
+     \pat cmds -> (pat,remdupc (mf cmds), and (ms cmds))
     )
     where mf3 = map fst3
           ms3 = map snd3
@@ -126,27 +133,25 @@ f = (\xs -> (mf3 xs,remdupc (ms3 xs),and (mt3 xs)),
           ms = map snd
           calls = map snd3
           calls2 = undefined
-          remdupc = removeduplicates.concat
+          remdupc = (union []).concat
+          e = ([],True)
 
 -- Checks whether all Alt are contained in given Alts
 containsall alts = elem PEmpty alts &&
-                    elem PLambda alts && 
-                    elem PDebris alts && 
-                    elem PBoundary alts && 
-                    elem PAsteroid alts
+                   elem PLambda alts && 
+                   elem PDebris alts && 
+                   elem PBoundary alts && 
+                   elem PAsteroid alts
 
 -- Get the first/second/third argument of a 3-tuple                           
 fst3 (a,_,_) = a
 snd3 (_,a,_) = a
 thd3 (_,_,a) = a
     
-removeduplicates = union []
     
-checkrules rules [] = True
-checkrules rules [call] = elem call rules
-checkrules rules (call:calls) = elem call rules && checkrules rules calls
+
                 
-rule name ys = (name, ys)
+--rule name ys = (name, ys)
     
 -- Exercise 7
 -- Print the size of the Space (the maxKey), and then the Space itself via a recursive function call, which prints the Space line by line.
@@ -191,15 +196,15 @@ toEnvironment s = f
 -- Exercise 9
 -- Do a step, given Environment and ArrowState. When the stack is empty, we're Done, otherwise we can analyze the command and act on it.
 step :: Environment -> ArrowState -> Step
-step env (ArrowState sp pos hd st) | null st = Done sp pos hd
+step env (ArrowState sp pos hd st) | null st   = Done sp pos hd
                                    | otherwise = analyze env (head st) (ArrowState sp pos hd (tail st))
 
 -- Returns a new Pos, by taking one step in the direction of the Heading.
 newPos :: Pos -> Heading -> Pos
-newPos (a,b) 0 = (a,b+1)
-newPos (a,b) 1 = (a+1,b)
-newPos (a,b) 2 = (a,b-1)
-newPos (a,b) 3 = (a-1,b)
+newPos (a,b) 0 = (a,b + 1)
+newPos (a,b) 1 = (a + 1,b)
+newPos (a,b) 2 = (a,b - 1)
+newPos (a,b) 3 = (a - 1,b)
 
 -- Checks whether the conditions for a valid Go hold (target field is empty, or contains lambda or debris)
 validGo :: Space ->  Pos -> Heading -> Bool
@@ -224,18 +229,16 @@ updateSpace sp pos cnt = L.update f pos sp
 analyze :: Environment -> Cmd -> ArrowState -> Step
 analyze _   Go         ast@(ArrowState sp pos hd st) | validGo sp pos hd = Ok (ArrowState sp (newPos pos hd) hd st)
                                                      | otherwise         = Ok ast
-analyze _   Take           (ArrowState sp pos hd st)                     = Ok (ArrowState (takePos sp pos) pos hd st)
+analyze _   Take       ast@(ArrowState sp pos hd st)                     = Ok (ArrowState (takePos sp pos) pos hd st)
 analyze _   Mark           (ArrowState sp pos hd st)                     = Ok (ArrowState (updateSpace sp pos Lambda) pos hd st)
 analyze _   Nothing2   ast@(ArrowState sp pos hd st)                     = Ok ast
 analyze _   (Turn dir)     (ArrowState sp pos hd st)                     = Ok (ArrowState sp pos (turn dir hd) st)
-analyze env (Id rule)      (ArrowState sp pos hd st)                     = case x of
+analyze env (Id rule)      (ArrowState sp pos hd st)                     = case L.lookup rule env of
                                                                            Nothing -> Fail "Rule doesn't exist."
-                                                                           Just y -> Ok (ArrowState sp pos hd (y++st))
-                                                                         where 
-                                                                         x = L.lookup rule env
+                                                                           Just y -> Ok (ArrowState sp pos hd (y ++ st))
 analyze _   (Case dir alts) (ArrowState sp pos hd st)                    = f xs
                                                                          where
-                                                                         xs = filter (checkAlts (printContent (isInMap sp (lookAtPos pos dir hd)))) alts
+                                                                         xs = filter ((checkAlts. printContent.isInMap sp) (lookAtPos pos dir hd)) alts
                                                                          f ys | null ys = Fail "No matching alts."
                                                                               | otherwise = Ok (ArrowState sp pos hd (addCmds (head ys) st))
 
@@ -245,12 +248,12 @@ addCmds (Alt _ cmds) st = cmds ++ st
 
 -- Checks whether the Alt matches a given Content (Content is given as string)                                 
 checkAlts :: Char -> Alt -> Bool
-checkAlts x (Alt PEmpty cmd) = x == '.'
-checkAlts x (Alt PLambda cmd) = x == '\\'
-checkAlts x (Alt PDebris cmd) = x == '%'
-checkAlts x (Alt PAsteroid cmd) = x== '0'
-checkAlts x (Alt PBoundary cmd) = x == '#'
-checkAlts x (Alt PDash cmd) = True
+checkAlts x (Alt PEmpty _)    = x == '.'
+checkAlts x (Alt PLambda _)   = x == '\\'
+checkAlts x (Alt PDebris _)   = x == '%'
+checkAlts x (Alt PAsteroid _) = x== '0'
+checkAlts x (Alt PBoundary _) = x == '#'
+checkAlts x (Alt PDash _)     = True
 
 -- Find the position that is being looked at, based on current Pos, and given Heading and Dir
 lookAtPos :: Pos -> Dir -> Heading -> Pos
@@ -259,27 +262,24 @@ lookAtPos pos dir hd = newPos pos (turn dir hd)
 -- Check whether a given Pos is contained in the Space, and what the Content is.
 -- If not included in the Space, this should imply that the position is a Boundary.
 isInMap :: Space -> Pos -> Contents
-isInMap sp pos = case x of
+isInMap sp pos = case L.lookup pos sp of
                Nothing -> Boundary
                Just y -> y
-               where
-               x = L.lookup pos sp
+               
 
 -- Perform the take action on given Position; pick up a Lambda or Debris and replace it by Empty. If it's not one of those two, do nothing.
 -- If the position is not in the Space, return an error.
 takePos :: Space -> Pos -> Space
-takePos sp pos = case x of
+takePos sp pos = case L.lookup pos sp of
                  Nothing -> error "Invalid position"
                  Just y -> f y
                where
-               x = L.lookup pos sp
-               f Lambda = updateSpace sp pos Empty
-               f Debris = updateSpace sp pos Empty
+               f x | x == Lambda || x == Debris = updateSpace sp pos Empty
                f _ = sp
 
 -- Perform the turn action, using given Dir and Heading.
 turn :: Dir -> Heading -> Heading
-turn Left x = (x - 1) `mod` 4
+turn Left  x = (x - 1) `mod` 4
 turn Right x = (x + 1) `mod` 4
 turn Front x = x
 
@@ -311,13 +311,11 @@ batch :: Environment -> ArrowState -> (Space, Pos, Heading)
 batch env ast = f (step env ast)
               where
               f (Done sp pos hd) = (sp, pos, hd)
-              f (Ok ast) = interactive env ast
+              f (Ok ast) = batch env ast
               f (Fail str) = error str
 
 -- Allows us to, if needed, create an intial ArrowState which puts on the stack the commands included under "start".
 addStart :: Environment -> Space -> Pos -> Heading -> ArrowState
-addStart env sp pos hd = case x of
+addStart env sp pos hd = case L.lookup("start") env of
                          Nothing -> error "No start commands."
                          Just y -> ArrowState sp pos hd y
-                        where
-                        x = L.lookup("start") env
