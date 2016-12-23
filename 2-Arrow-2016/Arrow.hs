@@ -297,6 +297,14 @@ interactive env ast = f (step env ast)
                     g env ast = do c <- getChar 
                                    if c == 'Y' then interactive env ast else g env ast
 
+-- Bonus 14
+batch :: Environment -> ArrowState -> (Space, Pos, Heading)
+batch env ast = f (step env ast)
+              where
+              f (Done sp pos hd) = (sp, pos, hd)
+              f (Ok ast) = nonInteractive env ast
+              f (Fail str) = error str
+
 -- Allows us to, if needed, create an intial ArrowState which puts on the stack the commands included under "start".
 addStart :: Environment -> Space -> Pos -> Heading -> ArrowState
 addStart env sp pos hd = case x of
