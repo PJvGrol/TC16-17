@@ -202,12 +202,16 @@ printSpace sp = concat (map f ls)
               f x | (fst (fst x) + 1) `mod` (maxx + 1) == 0 = printContent (snd x) : ['\n']
                   | otherwise = [printContent (snd x)]
 
+                  
+instance Show Contents where
+    show Empty = "."
+    show Lambda = "\\"
+    show Debris = "%"
+    show Asteroid = "o"
+    show Boundary = "#"
+    
 printContent :: Contents -> Char
-printContent Empty = '.'
-printContent Lambda = '\\'
-printContent Debris = '%'
-printContent Asteroid = 'o'
-printContent Boundary = '#'
+printContent x = (head.show) x
 
 -- Exercise 8
 toEnvironment :: String -> Environment
