@@ -111,20 +111,29 @@ check prog = elem "start" (fst3 tuple) && testdup (fst3 tuple) && checkrules (fs
             testdup (x:xs) = notElem x xs && testdup xs                
 
 f:: AlgebraProgram ([Ident],[Ident],Bool) (Ident,[Ident],Bool) ([Ident],Bool) (Pat, [Ident], Bool) 
-f = (\xs -> (rules xs,(removeduplicates.concat) (calls xs),and (map thd3 xs)),
-     \s ys -> (s, (removeduplicates.concat) (map fst ys), and (map snd ys)),
+f = (\xs -> (mf3 xs,remdupc (ms3 xs),and (mt3 xs)),
+     \s ys -> (s, remdupc (map fst ys), and (map snd ys)),
      ([],True),([],True),([],True),([],True),
      \s -> ([],True),
-     \dir alts -> ((removeduplicates.concat) (map snd3 alts),(elem PDash (map fst3 alts) || containsall (map fst3 alts)) && foldr (&&) True (map thd3 alts)),
+     \dir alts -> (remdupc (ms3 alts),(elem PDash (mf3 alts) || containsall (mf3 alts)) && and (mt3 alts)),
      \s ->([s],True),
-     \pat cmds -> (pat,(removeduplicates.concat) (map fst cmds), foldr (&&) True (map snd cmds))
+     \pat cmds -> (pat,remdupc $ mf cmds, and $ ms cmds)
     )
-    where rules = map fst3
+    where mf3 = map fst3
+          ms3 = map snd3
+          mt3 = map thd3
+          mf = map fst
+          ms = map snd
           calls = map snd3
           calls2 = undefined
+          remdupc = removeduplicates.concat
 
 -- Checks whether all Alt are contained in given Alts
-containsall alts = elem PEmpty alts && elem PLambda alts && elem PDebris alts && elem PBoundary alts && elem PAsteroid alts
+containsall alts = elem PEmpty alts &&
+                    elem PLambda alts && 
+                    elem PDebris alts && 
+                    elem PBoundary alts && 
+                    elem PAsteroid alts
 
 -- Get the first/second/third argument of a 3-tuple                           
 fst3 (a,_,_) = a
@@ -302,7 +311,7 @@ batch :: Environment -> ArrowState -> (Space, Pos, Heading)
 batch env ast = f (step env ast)
               where
               f (Done sp pos hd) = (sp, pos, hd)
-              f (Ok ast) = nonInteractive env ast
+              f (Ok ast) = interactive env ast
               f (Fail str) = error str
 
 -- Allows us to, if needed, create an intial ArrowState which puts on the stack the commands included under "start".
