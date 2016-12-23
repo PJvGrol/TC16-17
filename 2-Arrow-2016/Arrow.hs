@@ -64,12 +64,11 @@ contentsTable :: [(Contents,Char)]
 contentsTable =
   [  (Empty,'.'),(Lambda,'\\'),(Debris,'%'),(Asteroid,'O'),(Boundary,'#')]
 
-L.Empty
-L.Singleton
-L.Insert
-L.Union
 
 env = L.singleton "as" [Case Left [Alt PDash []],Go]
+
+makeEnv :: Environment
+makeEnv  = L.insert "yo" [Case Right [Alt PDash []],Go] (L.singleton "as" [Case Left [Alt PDash []],Go])
 -- These three should be defined by you
 type Heading = Int
 
