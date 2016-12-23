@@ -64,6 +64,12 @@ contentsTable :: [(Contents,Char)]
 contentsTable =
   [  (Empty,'.'),(Lambda,'\\'),(Debris,'%'),(Asteroid,'O'),(Boundary,'#')]
 
+L.Empty
+L.Singleton
+L.Insert
+L.Union
+
+env = L.singleton "as" [Case Left [Alt PDash []],Go]
 -- These three should be defined by you
 type Heading = Int
 
@@ -77,6 +83,8 @@ data Step  =  Done  Space Pos Heading
            |  Fail  String
 
 {-
+L.singleton "as" [Case Left [Alt PDash []],Go]
+ArrowState (L.singleton (1,2) Asteroid) (3,4) (2,3) [Case Left [Alt PDash []],Go]
 data Ident = Ident String deriving (Show)
 [Rule "asd" [], Rule "start" [], Rule "asdf" [Case Left [Alt PDash []],Go]]
 type Program = [Rule]
