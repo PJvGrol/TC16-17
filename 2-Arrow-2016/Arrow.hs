@@ -285,7 +285,9 @@ turn Front x = x
 
 -- Exercise 10
 {-
-    A recursive call in the middle of the command sequence requires more memory space. (???)
+    When the recursive call is in the middle of the command sequence, all the commands that come after that,
+    'stack' until the end of the recursion. This requires a lot of space. The farther you put the recursion to the end,
+    the less commands must be stacked, so the stack will be smaller.
 -}
                     
 -- Exercise 11
