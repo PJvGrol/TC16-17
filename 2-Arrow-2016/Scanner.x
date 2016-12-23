@@ -1,5 +1,6 @@
 {
-module Scanner (scan, TToken(..)) where
+module Scanner (alexScanTokens, TToken(..)) where
+import Debug.Trace
 }
 %wrapper "basic"
 
@@ -62,6 +63,6 @@ data TToken =
     TIdent String
     deriving (Show)
 
-scan = alexScanTokens
+
         
 }

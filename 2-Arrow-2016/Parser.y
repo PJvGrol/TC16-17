@@ -44,7 +44,10 @@ Rule  : Ident Next Cmds '.' {Rule $1 $3}
 Ident : Id           { $1 }
 
 Cmds  : {- empty -}         { [] }
-      | Cmds ',' Cmd        { $1 ++ [$3] }
+      | Cmd Cmds2       { $1 : $2 }
+
+Cmds2 : {-empty -}    {[]}
+      | ',' Cmd Cmds2   { $2 : $3 }
 
 Cmd   : go       { Go }
       | take     { Take }
@@ -59,8 +62,10 @@ Dir   : left     { Left }
       | front    { Front }
 
 Alts  : {- empty -}         { [] }
-      | Alts ';' Alt        { $1 ++ [$3] }
-      
+      | Alt Alts2       { $1 : $2 }
+
+Alts2 : {- empty -}         {[]}
+      | ';' Alt Alts2       {$2 : $3}
 Alt   : Pat Next Cmds { Alt $1 $3 }
 
 Pat   : Empty         { PEmpty }

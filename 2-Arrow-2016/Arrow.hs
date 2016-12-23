@@ -1,4 +1,4 @@
-module Arrow where
+module Main where
 
 import Prelude hiding ((<*), (<$),Left,Right)
 import ParseLib.Abstract hiding (parse)
@@ -78,7 +78,7 @@ data Step  =  Done  Space Pos Heading
 
 {-
 data Ident = Ident String deriving (Show)
-[Rule "asd" [], Rule "start" [], Rule "asdf" [Case Left [PDash]],Go]
+[Rule "asd" [], Rule "start" [], Rule "asdf" [Case Left [Alt PDash []],Go]]
 type Program = [Rule]
 data Rule = Rule Ident Cmds deriving (Show)
 type Cmds = [Cmd]
@@ -89,9 +89,14 @@ data Alt = Alt Pat Cmds deriving (Show)
 data Pat = PEmpty | PLambda | PDebris | PAsteroid | PBoundary | PDash deriving (Show)
 -}
 main = do
-    s <- getContents
-    print ((parsehap.scan) s)
+    s <- readFile "Add.Arrow"
+    print $ check $ parsehap $ alexScanTokens s
 
+    
+scan :: IO()    
+scan = do
+    s <- readFile "Add.Arrow"
+    putStrLn $ show $ alexScanTokens s
 -- Exercise 4
 {-
     ".. Happy is more efficient at parsing left-recursive rules; they result in a constant stack-space parser, whereas right-recursive rules require stack space
@@ -155,7 +160,7 @@ check prog = elem "start" (fst3 tuple) && testdup (fst3 tuple) && checkrules (fs
 
 f:: AlgebraProgram ([Ident],[Ident],Bool) (Ident,[Ident],Bool) ([Ident],Bool) (Pat, [Ident], Bool) 
 f = (\xs -> (rules xs,(removeduplicates.concat) (calls xs),and (map thd3 xs)),
-     \s ys ->  trace ( show ys) (s, (removeduplicates.concat) (map fst ys), and (map snd ys)),
+     \s ys -> (s, (removeduplicates.concat) (map fst ys), and (map snd ys)),
      ([],True),([],True),([],True),([],True),
      \s -> ([],True),
      \dir alts -> ((removeduplicates.concat) (map snd3 alts),(elem PDash (map fst3 alts) || containsall (map fst3 alts)) && foldr (&&) True (map thd3 alts)),
@@ -208,7 +213,7 @@ printContent Boundary = '#'
 toEnvironment :: String -> Environment
 toEnvironment s = f
                 where
-                rs = (parsehap . scan) s
+                rs = (parsehap . alexScanTokens) s
                 c = check rs
                 f | c = foldr (\(Rule i c) -> L.insert i c) L.empty rs
                   | otherwise = L.empty
