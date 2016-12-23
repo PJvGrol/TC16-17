@@ -211,10 +211,19 @@ updateSpace sp pos cnt = L.update f pos sp
 interactive :: Environment -> ArrowState -> IO ()
 interactive env ast = f (step env ast)
                     where
-                    f (Done sp _ _)= do putStrLn (printSpace sp)
+                    f (Done sp _ _)                  = do putStrLn (printSpace sp)
+                                                          putStrLn "Finished running program."
                     f (Ok ast@(ArrowState sp _ _ _)) = do putStrLn (printSpace sp)
-                                                          interactive env ast
-                    f (Fail str) = do putStrLn (str)
+                                                          putStrLn "Type 'Y' and hit Enter to continue."
+                                                          g env ast
+                    f (Fail str)                     = do putStrLn (str)
+                                                          putStrLn "Running program Failed"
+                    g env ast = do c <- getChar 
+                                   if c == 'Y' then interactive env ast else g env ast
 
-interactive' :: Environment -> ArrowState -> IO ()
-interactive' env ast = undefined
+addStart :: Environment -> Space -> Pos -> Heading -> ArrowState
+addStart env sp pos hd = case x of
+                         Nothing -> error "No start commands."
+                         Just y -> ArrowState sp pos hd y
+                        where
+                        x = L.lookup("start") env
