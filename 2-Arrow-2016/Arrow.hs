@@ -1,14 +1,16 @@
 module Arrow where
 
-import Prelude hiding ((<*), (<$))
+import Prelude hiding ((<*), (<$),Left,Right)
 import ParseLib.Abstract hiding (parse)
 import Data.Map (Map)
 import qualified Data.Map as L
 import Control.Monad (replicateM)
 import Data.Char (isSpace)
+import Data.List
 import Parser
 import Scanner
 import Data.Maybe
+import Debug.Trace
 {-data Token =
     Next        |
     Dot         |
@@ -76,7 +78,7 @@ data Step  =  Done  Space Pos Heading
 
 {-
 data Ident = Ident String deriving (Show)
-[Rule (Ident "asd") [], Rule (Ident "start") [], Rule (Ident "asdf") [Id (Ident "asd"),Go]]
+[Rule "asd" [], Rule "start" [], Rule "asdf" [Case Left [PDash]],Go]
 type Program = [Rule]
 data Rule = Rule Ident Cmds deriving (Show)
 type Cmds = [Cmd]
@@ -127,10 +129,14 @@ foldProgram (prog,rule,go,take,mark,not,turn,cas,id,alt) = f
             
 -- Exercise 6
 check :: Program -> Bool
-check = foldProgram (prog,rule,go,take,mark,not,turn,cas,id,alt)
+check prog = elem "start" (fst3 tuple) && testdup (fst3 tuple) && checkrules (fst3 tuple) (snd3 tuple) && thd3 tuple
+      where tuple = foldProgram f prog
+            testdup [x] = True
+            testdup (x:xs) = notElem x xs && testdup xs
+{-check = foldProgram (prog,rule,go,take,mark,not,turn,cas,id,alt)
             where
                 --prog xs = concat(map snd xs)
-                prog xs = elem "start" (rules xs) && removedup (rules xs) && (checkrules ("":(map fst xs)) (concat(map (fst.snd) xs)) || map (fst.snd) xs == [])
+                prog xs = elem "start" (rules xs) && removedup (rules xs) && (checkrules ("":(map fst xs)) (concat(map fst (map snd xs))) || map fst (map snd xs) == [])
                 --rule (Ident name) ys = (name, concat ys)
                 go = ([],True)
                 take = ([],True)
@@ -140,14 +146,40 @@ check = foldProgram (prog,rule,go,take,mark,not,turn,cas,id,alt)
                 cas _ xs = ([],pats xs)
                 id s = (s,True)
                 alt x _ = x
-                removedup [x] = True
-                removedup (x:xs) = notElem x xs && removedup xs
+
                 rules = map fst
                 calls = map snd
                 pats xs = elem PDash xs
-                pat (Alt x _) = x
+                pat (Alt x _) = x-}
                 
 
+f:: AlgebraProgram ([Ident],[Ident],Bool) (Ident,[Ident],Bool) ([Ident],Bool) (Pat, [Ident], Bool) 
+f = (\xs -> (rules xs,(removeduplicates.concat) (calls xs),and (map thd3 xs)),
+     \s ys ->  trace ( show ys) (s, (removeduplicates.concat) (map fst ys), and (map snd ys)),
+     ([],True),([],True),([],True),([],True),
+     \s -> ([],True),
+     \dir alts -> ((removeduplicates.concat) (map snd3 alts),(elem PDash (map fst3 alts) || containsall (map fst3 alts)) && foldr (&&) True (map thd3 alts)),
+     \s ->([s],True),
+     \pat cmds -> (pat,(removeduplicates.concat) (map fst cmds), foldr (&&) True (map snd cmds))
+    )
+    where rules = map fst3
+          calls = map snd3
+          calls2 = undefined
+          
+containsall alts = elem PEmpty alts &&
+                              elem PLambda alts &&
+                              elem PDebris alts &&
+                              elem PBoundary alts &&
+                              elem PAsteroid alts
+
+
+                              
+fst3 (a,_,_) = a
+snd3 (_,a,_) = a
+thd3 (_,_,a) = a
+    
+removeduplicates = union []
+    
 checkrules rules [] = True
 checkrules rules [call] = elem call rules
 checkrules rules (call:calls) = elem call rules && checkrules rules calls
