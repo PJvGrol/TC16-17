@@ -65,7 +65,7 @@ contentsTable =
   [  (Empty,'.'),(Lambda,'\\'),(Debris,'%'),(Asteroid,'O'),(Boundary,'#')]
 
 -- These three should be defined by you
-type Heading = (Int, Int)
+type Heading = Int
 
 type Environment = Map (Parser.Ident) Cmds
 
@@ -225,10 +225,13 @@ toEnvironment s = f
 -- Exercise 9
 step :: Environment -> ArrowState -> Step
 step env (ArrowState sp pos hd st) | stackIsEmpty st = Done sp pos hd
-                                   | otherwise = undefined
+                                   | otherwise = analyze env (head st) (ArrowState sp pos hd (tail st))
 
-newPos :: Pos -> Pos -> Pos
-newPos (a, b) (c, d) = (a + c, b + d)
+newPos :: Pos -> Heading -> Pos
+newPos (a,b) 0 = (a,b+1)
+newPos (a,b) 1 = (a+1,b)
+newPos (a,b) 2 = (a,b-1)
+newPos (a,b) 3 = (a-1,b)
 
 validGo :: Space ->  Pos -> Heading -> Bool
 validGo sp po he = f k
@@ -247,6 +250,64 @@ updateSpace :: Space -> Pos -> Contents -> Space
 updateSpace sp pos cnt = L.update f pos sp
                     where
                     f x = Just cnt
+
+analyze :: Environment -> Cmd -> ArrowState -> Step
+analyze _ Go ast@(ArrowState sp pos hd st) | validGo sp pos hd = Ok (ArrowState sp (newPos pos hd) hd st)
+                                         | otherwise = Ok ast
+analyze _ Take (ArrowState sp pos hd st) = Ok (ArrowState (takePos sp pos) pos hd st)
+analyze _ Mark (ArrowState sp pos hd st) = Ok (ArrowState (updateSpace sp pos Lambda) pos hd st)
+analyze _ Nothing2 ast@(ArrowState sp pos hd st) = Ok ast
+analyze _ (Turn dir) (ArrowState sp pos hd st) = Ok (ArrowState sp pos (turn dir hd) st)
+analyze env (Id rule) (ArrowState sp pos hd st) = case x of
+                                                Nothing -> Fail "Rule doesn't exist."
+                                                Just y -> Ok (ArrowState sp pos hd (y++st))
+                                                where 
+                                                x = L.lookup rule env
+analyze _ (Case dir alts) (ArrowState sp pos hd st) = f xs
+                                                    where
+                                                    xs = filter (checkAlts (printContent (isInMap sp (lookAtPos pos dir hd)))) alts
+                                                    f ys | null ys = Fail "No matching alts."
+                                                         | otherwise = Ok (ArrowState sp pos hd (addCmds (head ys) st))
+
+addCmds :: Alt -> Stack -> Stack
+addCmds (Alt _ cmds) st = cmds ++ st
+                                                         
+checkAlts :: Char -> Alt -> Bool
+checkAlts x (Alt PEmpty cmd) = x == '.'
+checkAlts x (Alt PLambda cmd) = x == '\\'
+checkAlts x (Alt PDebris cmd) = x == '%'
+checkAlts x (Alt PAsteroid cmd) = x== '0'
+checkAlts x (Alt PBoundary cmd) = x == '#'
+checkAlts x (Alt PDash cmd) = True
+
+lookAtPos :: Pos -> Dir -> Heading -> Pos
+lookAtPos pos dir hd = newPos pos (turn dir hd)
+
+isInMap :: Space -> Pos -> Contents
+isInMap sp pos = case x of
+               Nothing -> Boundary
+               Just y -> y
+               where
+               x = L.lookup pos sp
+
+takePos :: Space -> Pos -> Space
+takePos sp pos = case x of
+                 Nothing -> error "Invalid position"
+                 Just y -> f y
+               where
+               x = L.lookup pos sp
+               f Lambda = updateSpace sp pos Empty
+               f Debris = updateSpace sp pos Empty
+               f _ = sp
+
+turn :: Dir -> Heading -> Heading
+turn Left x = (x - 1) `mod` 4
+turn Right x = (x + 1) `mod` 4
+turn Front x = x
+
+--data Cmd = Go | Take | Mark | Nothing2 | Turn Dir | Case Dir Alts | Id Ident deriving (Show)
+
+--data Dir = Left | Right | Front deriving (Show)
                     
 -- Exercise 11
 interactive :: Environment -> ArrowState -> IO ()
