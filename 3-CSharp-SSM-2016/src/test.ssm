@@ -1,0 +1,7 @@
+ldc 1
+ldc 2
+link 2
+ldla -1
+mul
+t:
+add
