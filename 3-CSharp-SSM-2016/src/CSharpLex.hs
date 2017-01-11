@@ -1,5 +1,6 @@
 module CSharpLex where
 
+import Prelude hiding ((<$), (<*), (*>))
 import Data.Char
 import Control.Monad
 import ParseLib.Abstract
@@ -14,10 +15,13 @@ data Token = POpen    | PClose      -- parentheses     ()
            | KeyWhile | KeyReturn
            | KeyTry   | KeyCatch
            | KeyClass | KeyVoid
+           | KeyTrue  | KeyFalse
            | StdType   String       -- the 8 standard types
            | Operator  String       -- the 15 operators
            | UpperId   String       -- uppercase identifiers
            | LowerId   String       -- lowercase identifiers
+           | UpperCh   Char
+           | LowerCh   Char
            | ConstInt  Int
            | ConstBool Bool
            deriving (Eq, Show)
@@ -52,6 +56,8 @@ terminals =
     , ( KeyCatch  , "catch"  )
     , ( KeyClass  , "class"  )
     , ( KeyVoid   , "void"   )
+    , ( KeyTrue   , "true"   )
+    , ( KeyFalse  , "false"  )
     ]
 
 
@@ -63,6 +69,13 @@ lexLowerId = (\x xs -> LowerId (x:xs)) <$> satisfy isLower <*> greedy (satisfy i
 
 lexUpperId :: Parser Char Token
 lexUpperId = (\x xs -> UpperId (x:xs)) <$> satisfy isUpper <*> greedy (satisfy isAlphaNum)
+
+lexLowerCh :: Parser Char Token
+lexLowerCh = LowerCh <$> satisfy isLower
+
+lexUpperCh :: Parser Char Token
+lexUpperCh = UpperCh <$> satisfy isUpper
+
 
 lexConstInt :: Parser Char Token
 lexConstInt = (ConstInt . read) <$> greedy1 (satisfy isDigit)
@@ -89,6 +102,8 @@ lexToken = greedyChoice
              , lexConstInt
              , lexLowerId
              , lexUpperId
+             , lexLowerCh
+             , lexUpperCh
              ]
 
 lexicalScanner :: Parser Char [Token]
@@ -124,4 +139,3 @@ sOperator = satisfy isOperator
 
 sSemi :: Parser Token Token
 sSemi =  symbol Semicolon
-

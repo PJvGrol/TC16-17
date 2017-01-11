@@ -1,5 +1,6 @@
 module Main where
 
+import Prelude hiding ((<$), (<*), (*>))
 import System.Environment
 import System.FilePath
 
