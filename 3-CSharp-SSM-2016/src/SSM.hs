@@ -60,4 +60,3 @@ instrSize i = case i of {
                   STS  _   -> 2;    STA   _   -> 2;    AJS  _    -> 2;   LINK _ -> 2;   TRAP _ -> 2;
                   SWPR _   -> 2;    LABEL _   -> 0;    otherwise -> 1
               }
-
