@@ -10,7 +10,7 @@ data Class = Class Token [Member]
     deriving Show
 
 data Member = MemberD Decl
-            | MemberM Type Token [Decl] Stat
+            | MemberM Type Token [Decl] Stat -- Method = ( typevoid lowerid ( decls? ) block )
             deriving Show
 
 data Stat = StatDecl   Decl

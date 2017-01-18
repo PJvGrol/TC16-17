@@ -27,7 +27,8 @@ fMembDecl :: Decl -> Code
 fMembDecl d = []
 
 fMembMeth :: Type -> Token -> [Decl] -> Code -> Code
-fMembMeth t (LowerId x) ps s = [LABEL x] ++ s ++ [RET]
+fMembMeth t (LowerId x) ps s = [LABEL x] ++ s ++ [RET] -- TODO: something with ps
+ -- Ga variabelen opslaan, houd bij waar ze opgeslagen staan
 
 fStatDecl :: Decl -> Code
 fStatDecl d = []

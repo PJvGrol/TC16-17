@@ -47,7 +47,6 @@ formatCode :: Code -> String
 formatCode = filter clean . concatMap ((++ "\n") . formatInstr)
     where clean c = notElem c "()\""
 
-
 codeSize :: Code -> Int
 codeSize = sum . map instrSize
 
