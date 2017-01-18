@@ -1,7 +1,23 @@
 	Bsr main
 	HALT
 main:
-	LDC 1
+	LDC 5
+	LDC 3
+	MUL
+	LDC 8
+	EQ
+	LDC 4
+	LDC 6
+	MUL
+	LDC 7
+	GT
+	LDC 5
+	LDC 3
+	MUL
+	LDC 15
+	EQ
+	AND
+	OR
 	LDS 0
 	LDLA 37
 	STA 0

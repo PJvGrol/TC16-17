@@ -5,7 +5,7 @@ class Hello
     void main()
     {
         int b;
-        b = true;
+        b=5*3==8 || 4*6>7 && 5*3==15;
     }
     
     int square( int x )
