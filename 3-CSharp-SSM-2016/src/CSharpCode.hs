@@ -16,7 +16,7 @@ codeAlgebra :: CSharpAlgebra Code Code Code (ValueOrAddress -> Code)
 codeAlgebra =
     ( fClas
     , (fMembDecl, fMembMeth)
-    , (fStatDecl, fStatExpr, fStatIf, fStatWhile, fStatReturn, fStatBlock)
+    , (fStatDecl, fStatExpr, fStatIf, fStatWhile, fStatReturn, fPrint, fStatBlock)
     , (fExprCon, fExprVar, fExprOp)
     )
 
@@ -50,6 +50,9 @@ fStatWhile e s1 = [BRA n] ++ s1 ++ c ++ [BRT (-(n + k + 2))]
 
 fStatReturn :: (ValueOrAddress -> Code) -> Code
 fStatReturn e = e Value ++ [pop] ++ [RET]
+
+fPrint :: (ValueOrAddress -> Code) -> Code
+fPrint e = e Value ++ [TRAP 0]
 
 fStatBlock :: [Code] -> Code
 fStatBlock = concat

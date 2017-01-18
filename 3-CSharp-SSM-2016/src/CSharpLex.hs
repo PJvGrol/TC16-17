@@ -12,7 +12,7 @@ data Token = POpen    | PClose      -- parentheses     ()
            | COpen    | CClose      -- curly braces    {}
            | Comma    | Semicolon
            | KeyIf    | KeyElse
-           | KeyWhile | KeyReturn
+           | KeyWhile | KeyReturn | KeyPrint
            | KeyTry   | KeyCatch
            | KeyClass | KeyVoid
            | KeyTrue  | KeyFalse
@@ -52,6 +52,7 @@ terminals =
     , ( KeyElse   , "else"   )
     , ( KeyWhile  , "while"  )
     , ( KeyReturn , "return" )
+    , ( KeyPrint  , "print"  )
     , ( KeyTry    , "try"    )
     , ( KeyCatch  , "catch"  )
     , ( KeyClass  , "class"  )

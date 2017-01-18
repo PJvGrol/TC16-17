@@ -18,6 +18,7 @@ data Stat = StatDecl   Decl
           | StatIf     Expr Stat Stat
           | StatWhile  Expr Stat
           | StatReturn Expr
+          | StatPrint  Expr
           | StatBlock  [Stat]
           deriving Show
 
@@ -46,20 +47,13 @@ pExprSimple =  ExprConst <$> sConst
            <|> parenthesised (pExpr 0)
 
 pExpr :: Int -> Parser Token Expr
-pExpr n | n <= 7 = chainl (pExpr (n+1)) (ExprOper <$> (pOperator n))  --(\x y z -> ExprOper y x z) <$> pExpr n <*> (pOperator n) <*> pExpr (n+1) <|> pExpr (n+1) <|> pExprSimple
+pExpr n | n <= 7 = chainl (pExpr (n+1)) (ExprOper <$> (pOperator n))
         | otherwise = pExprSimple
-
---(pExpr pr <|> pExprSimple) <*> op <*> (pExpr pr <|> pExprSimple)  --chainr pExprSimple (ExprOper <$> sOperator)
---        where (op,pr) = pOperator
 
 pOperator :: Int -> Parser Token Token
 pOperator n = satisfy f
             where f (Operator x) = expPrior2 x >= n
                   f x = False  
-
-        
-{-pOperator :: (Parser Token (Expr - Expr), Int)
-pOperator = (\x -> (ExprOper x, expPrior2 x)) <$> sOperator-}
 
 expPrior2 :: String -> Int
 expPrior2  op | op == "=" = 0
@@ -70,15 +64,6 @@ expPrior2  op | op == "=" = 0
               | elem op ["<=","<",">=",">"] = 5
               | elem op ["+","-"] = 6
               | elem op ["*","/","%"] = 7
-          
-{-expPrior :: [(String, Int)]
-expPrior = [("+",6), ("-",6), ("*",7), ("/",7), ("%",7), ("&&",2), ("||",1), ("^",3), ("<=",5), ("<",5), (">=",5), (">",5), ("==",4), ("!=",4), ("=",0)]
-
-mapPrior :: [(Token, Int)]
-mapPrior = map op expPrior
-         where op (s,p) = (Operator s, p)-}
-
-
 
 pMember :: Parser Token Member
 pMember =  MemberD <$> pDeclSemi
@@ -93,6 +78,7 @@ pStat =  StatExpr <$> (pExpr 0) <*  sSemi
      <|> StatIf     <$ symbol KeyIf     <*> parenthesised (pExpr 0) <*> pStat <*> optionalElse
      <|> StatWhile  <$ symbol KeyWhile  <*> parenthesised (pExpr 0) <*> pStat
      <|> StatReturn <$ symbol KeyReturn <*> (pExpr 0)               <*  sSemi
+     <|> StatPrint  <$ symbol KeyPrint  <*> parenthesised (pExpr 0) <*  sSemi
      <|> pBlock
      where optionalElse = option ((\_ x -> x) <$> symbol KeyElse <*> pStat) (StatBlock [])
 
