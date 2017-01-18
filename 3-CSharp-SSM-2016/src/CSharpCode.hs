@@ -6,6 +6,7 @@ import CSharpLex
 import CSharpGram
 import CSharpAlgebra
 import SSM
+import Data.Char
 
 
 data ValueOrAddress = Value | Address
@@ -54,6 +55,10 @@ fStatBlock = concat
 
 fExprCon :: Token -> ValueOrAddress -> Code
 fExprCon (ConstInt n) va = [LDC n]
+fExprCon (KeyTrue) va = [LDC 1]
+fExprCon (KeyFalse) va = [LDC 0]
+fExprCon (UpperCh c) va = [LDC (ord c)]
+fExprCon (LowerCh c) va = [LDC (ord c)]
 
 fExprVar :: Token -> ValueOrAddress -> Code
 fExprVar (LowerId x) va = let loc = 37 in case va of

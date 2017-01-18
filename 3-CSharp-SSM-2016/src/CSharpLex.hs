@@ -16,6 +16,7 @@ data Token = POpen    | PClose      -- parentheses     ()
            | KeyTry   | KeyCatch
            | KeyClass | KeyVoid
            | KeyTrue  | KeyFalse
+           | SComment | MComment
            | StdType   String       -- the 8 standard types
            | Operator  String       -- the 15 operators
            | UpperId   String       -- uppercase identifiers
@@ -23,7 +24,6 @@ data Token = POpen    | PClose      -- parentheses     ()
            | UpperCh   Char
            | LowerCh   Char
            | ConstInt  Int
-           | ConstBool Bool
            deriving (Eq, Show)
 
 keyword :: String -> Parser Char String
@@ -61,8 +61,8 @@ terminals =
     ]
 
 
-lexWhiteSpace :: Parser Char String
-lexWhiteSpace = greedy (satisfy isSpace)
+lexWhiteSpace :: Parser Char ()
+lexWhiteSpace = () <$ greedy ((() <$ satisfy isSpace) <|> lexSingleComment <|> lexMultipleComment)
 
 lexLowerId :: Parser Char Token
 lexLowerId = (\x xs -> LowerId (x:xs)) <$> satisfy isLower <*> greedy (satisfy isAlphaNum)
@@ -76,7 +76,6 @@ lexLowerCh = LowerCh <$> satisfy isLower
 lexUpperCh :: Parser Char Token
 lexUpperCh = UpperCh <$> satisfy isUpper
 
-
 lexConstInt :: Parser Char Token
 lexConstInt = (ConstInt . read) <$> greedy1 (satisfy isDigit)
 
@@ -85,6 +84,12 @@ lexEnum f xs = f <$> choice (map keyword xs)
 
 lexTerminal :: Parser Char Token
 lexTerminal = choice [t <$ keyword s | (t,s) <- terminals]
+
+lexSingleComment :: Parser Char ()
+lexSingleComment = () <$ token "//" <* greedy(satisfy (/= '\n'))
+
+lexMultipleComment :: Parser Char ()
+lexMultipleComment = () <$ token "/*" <* greedy(token "*/")
 
 
 stdTypes :: [String]
@@ -124,11 +129,20 @@ sLowerId :: Parser Token Token
 sLowerId = satisfy isLowerId
     where isLowerId (LowerId _) = True
           isLowerId _           = False
+          
+sUpperCh :: Parser Token Token
+sUpperCh = satisfy isUpperCh
+    where isUpperCh (UpperCh _) = True
+          isUpperCh _           = False
+
+sLowerCh :: Parser Token Token
+sLowerCh = satisfy isLowerCh
+    where isLowerCh (LowerCh _) = True
+          isLowerCh _           = False
 
 sConst :: Parser Token Token
 sConst  = satisfy isConst
     where isConst (ConstInt  _) = True
-          isConst (ConstBool _) = True
           isConst _             = False
 
 sOperator :: Parser Token Token
