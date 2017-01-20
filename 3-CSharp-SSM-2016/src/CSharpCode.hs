@@ -30,10 +30,10 @@ fMembMeth :: Type -> Token -> [Decl] -> Code -> Code
 fMembMeth t (LowerId x) ps s = [LABEL x] ++ s ++ [STS (-n)] ++ [AJS (-(n-1))] ++ [RET] --TODO: Finish it
                              where
                              n = length ps
-                             envmap = fromList (zip (Prelude.map declToString ps) [n..])
+                             envmap = fromList (zip (Prelude.map declToToken ps) (zip (repeat Lcl) [n..])) -- Lcl [(Token, (Loc, Int))]
 
-declToString :: Decl -> String
-declToString (Decl tp tk) = show tk
+declToToken :: Decl -> Token
+declToToken (Decl tp tk) = tk
 
 -- Environment is mapping van String naar Int (int relatieve locatie aan mp) laatste mp staat op -2
 -- TODO: something with ps
