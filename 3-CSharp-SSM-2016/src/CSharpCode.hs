@@ -30,7 +30,7 @@ fMembMeth :: Type -> Token -> [Decl] -> Code -> Code
 fMembMeth t (LowerId x) ps s = [LABEL x] ++ s ++ [STS (-n)] ++ [AJS (-(n-1))] ++ [RET] --TODO: Finish it
                              where
                              n = length ps
-                             envmap = fromList (zip (Prelude.map declToToken ps) (zip (repeat Lcl) [n..])) -- Lcl [(Token, (Loc, Int))]
+                             envmap = undefined --fromList (zip (Prelude.map declToToken ps) (zip (repeat Lcl) [n..])) -- Lcl [(Token, (Loc, Int))]
 
 declToToken :: Decl -> Token
 declToToken (Decl tp tk) = tk
@@ -83,13 +83,19 @@ fExprVar (LowerId x) va = let loc = 37 in case va of
                                               Address  ->  [LDLA loc]
 
 fExprOp :: Token -> (ValueOrAddress -> Code) -> (ValueOrAddress -> Code) -> ValueOrAddress -> Code
-fExprOp (Operator "=") e1 e2 va = e2 Value ++ [LDS 0] ++ e1 Address ++ [STA 0]
-fExprOp (Operator op)  e1 e2 va = e1 Value ++ e2 Value ++ [opCodes ! op]
+fExprOp (Operator "=") e1 e2 va = e2 Value ++ [LDS 0] ++ e1 Address ++ [STA 0] -- x = 3 LDS = LoadStack: laad value op SP STA: 
+-- LDC 3 LDC1 ADD LDS 0 LDLA 37 STA 0 
+{-fExprOp (Operator "+=") e1 e2 va = -- Laadt waarde van e1 ++ e2 Value ++ [ADD, LDS 0] ++ e1 Address ++ [STA 0]
+fExprOp (Operator "-=") e1 e2 va = -- Laadt waarde van e1 ++ e2 Value ++ [SUB, LDS 0] ++ e1 Address ++ [STA 0]
+fExprOp (Operator "*=") e1 e2 va = -- Laadt waarde van e1 ++ e2 Value ++ [MUL, LDS 0] ++ e1 Address ++ [STA 0]
+fExprOp (Operator "/=") e1 e2 va = -- Laadt waarde van e1 ++ e2 Value ++ [DIV, LDS 0] ++ e1 Address ++ [STA 0]-}
+fExprOp (Operator op)  e1 e2 va = e1 Value ++ e2 Value ++ (opCodes ! op)
 
 
-opCodes :: Map String Instr
-opCodes = fromList [ ("+", ADD), ("-", SUB),  ("*", MUL), ("/", DIV), ("%", MOD)
-                   , ("<=", LE), (">=", GE),  ("<", LT),  (">", GT),  ("==", EQ)
-                   , ("!=", NE), ("&&", AND), ("||", OR), ("^", XOR)
-                   ]
+opCodes :: Map String [Instr]
+opCodes = fromList [ ("+", [ADD]), ("-", [SUB]),  ("*", [MUL]), ("/", [DIV]), ("%", [MOD])
+                   , ("<=", [LE]), (">=", [GE]),  ("<", [LT]),  (">", [GT]),  ("==", [EQ])
+                   , ("!=", [NE]), ("&&", [AND]), ("||", [OR]), ("^", [XOR]), ("++", [LDC 1, ADD])
+                   , ("--", [LDC 1, SUB])
+                   ] -- ++ += *= -- -= -- Aparte fExprOp voor alle operaties??
 

@@ -56,7 +56,7 @@ pOperator n = satisfy f
                   f x = False  
 
 expPrior2 :: String -> Int
-expPrior2  op | op == "=" = 0
+expPrior2  op | elem op["=", "+=", "-=", "*=", "/="] = 0
               | op == "||" = 1
               | op == "&&" = 2
               | op == "^" = 3
@@ -64,6 +64,7 @@ expPrior2  op | op == "=" = 0
               | elem op ["<=","<",">=",">"] = 5
               | elem op ["+","-"] = 6
               | elem op ["*","/","%"] = 7
+              | elem op ["++", "--"] = 8
 
 pMember :: Parser Token Member
 pMember =  MemberD <$> pDeclSemi

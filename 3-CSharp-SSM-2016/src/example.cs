@@ -4,9 +4,7 @@ class Hello
     
     void main()
     {
-        int b;
-        print(4+3*5+2 || 3*4);
-        square(3);
+        3++;
     }
     
     int square( int x )
