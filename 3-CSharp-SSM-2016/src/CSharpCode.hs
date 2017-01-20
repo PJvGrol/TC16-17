@@ -30,19 +30,19 @@ fMembMeth :: Type -> Token -> [Decl] -> Code -> Code
 fMembMeth t (LowerId x) ps s = [LABEL x] ++ s ++ [STS (-n)] ++ [AJS (-(n-1))] ++ [RET] --TODO: Finish it
                              where
                              n = length ps
-                             envmap = fromList (toTupledList ps (-1 -n))
-toTupledList :: [Decl] -> Int -> [(String, Int)]
-toTupledList ps n = undefined
+                             envmap = fromList (zip (Prelude.map declToString ps) [n..])
 
 declToString :: Decl -> String
 declToString (Decl tp tk) = show tk
-                             -- Environment is mapping van String naar Int (int relatieve locatie aan mp) laatste mp staat op -2
+
+-- Environment is mapping van String naar Int (int relatieve locatie aan mp) laatste mp staat op -2
 -- TODO: something with ps
 -- Decl Type Token
- -- Ga variabelen opslaan, houd bij waar ze opgeslagen staan -> Zet param onder markpointer mbv ldc
- -- Link om MP te plaatsen
- -- Environment om bij te houden waar de param opgeslagen staan
- 
+-- Ga variabelen opslaan, houd bij waar ze opgeslagen staan -> Zet param onder markpointer mbv ldc
+-- Link om MP te plaatsen
+-- Environment om bij te houden waar de param opgeslagen staan
+-- LDL: Waarde tov MP
+
 fStatDecl :: Decl -> Code
 fStatDecl d = []
 
