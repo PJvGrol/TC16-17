@@ -27,9 +27,17 @@ fMembDecl :: Decl -> Code
 fMembDecl d = []
 
 fMembMeth :: Type -> Token -> [Decl] -> Code -> Code
-fMembMeth t (LowerId x) ps s = [LABEL x] ++ s ++ [RET] -- TODO: something with ps
- -- Ga variabelen opslaan, houd bij waar ze opgeslagen staan
+fMembMeth t (LowerId x) ps s = [LABEL x] ++ s ++ [STS (-n)] ++ [AJS (-(n-1))] ++ [RET] --TODO: Finish it
+                             where
+                             n = length ps
 
+                             -- Environment is mapping van String naar Int
+-- TODO: something with ps
+-- Decl Type Token
+ -- Ga variabelen opslaan, houd bij waar ze opgeslagen staan -> Zet param onder markpointer mbv ldc
+ -- Link om MP te plaatsen
+ -- Environment om bij te houden waar de param opgeslagen staan
+ 
 fStatDecl :: Decl -> Code
 fStatDecl d = []
 
