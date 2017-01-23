@@ -17,6 +17,7 @@ data Stat = StatDecl   Decl
           | StatExpr   Expr
           | StatIf     Expr Stat Stat
           | StatWhile  Expr Stat
+          | StatFor    Expr Stat Stat Stat
           | StatReturn Expr
           | StatPrint  Expr
           | StatBlock  [Stat]
@@ -58,7 +59,7 @@ pOperator n = satisfy f
                   f x = False  
 
 expPrior2 :: String -> Int
-expPrior2  op | op == "=" = 0
+expPrior2  op | elem op["=", "+=", "-=", "*=", "/="] = 0
               | op == "||" = 1
               | op == "&&" = 2
               | op == "^" = 3
@@ -66,6 +67,7 @@ expPrior2  op | op == "=" = 0
               | elem op ["<=","<",">=",">"] = 5
               | elem op ["+","-"] = 6
               | elem op ["*","/","%"] = 7
+              | elem op ["++", "--"] = 8
 
 pMember :: Parser Token Member
 pMember =  MemberD <$> pDeclSemi
@@ -79,6 +81,7 @@ pStat :: Parser Token Stat
 pStat =  StatExpr <$> (pExpr 0) <*  sSemi
      <|> StatIf     <$ symbol KeyIf     <*> parenthesised (pExpr 0) <*> pStat <*> optionalElse
      <|> StatWhile  <$ symbol KeyWhile  <*> parenthesised (pExpr 0) <*> pStat
+     -- <|> StatFor    <$ symbol KeyFor    <*> parenthesised
      <|> StatReturn <$ symbol KeyReturn <*> (pExpr 0)               <*  sSemi
      <|> StatPrint  <$ symbol KeyPrint  <*> parenthesised (pExpr 0) <*  sSemi
      <|> pBlock

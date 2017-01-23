@@ -40,6 +40,24 @@ fMembMeth t (LowerId x) ps s = [LABEL x, LINK 0] ++ snd(s env) ++ [UNLINK, RET]
                                    op2 (Decl tp tk) mp = M.insert tk (Lcl,(-1)*(size mp)-2) mp
 -- TODO: something with ps
  -- Ga variabelen opslaan, houd bij waar ze opgeslagen staan
+{-=======
+fMembMeth :: Type -> Token -> [Decl] -> Code -> Code
+fMembMeth t (LowerId x) ps s = [LABEL x] ++ s ++ [STS (-n)] ++ [AJS (-(n-1))] ++ [RET] --TODO: Finish it
+                             where
+                             n = length ps
+                             envmap = undefined --fromList (zip (Prelude.map declToToken ps) (zip (repeat Lcl) [n..])) -- Lcl [(Token, (Loc, Int))]
+
+declToToken :: Decl -> Token
+declToToken (Decl tp tk) = tk-}
+
+-- Environment is mapping van String naar Int (int relatieve locatie aan mp) laatste mp staat op -2
+-- TODO: something with ps
+-- Decl Type Token
+-- Ga variabelen opslaan, houd bij waar ze opgeslagen staan -> Zet param onder markpointer mbv ldc
+-- Link om MP te plaatsen
+-- Environment om bij te houden waar de param opgeslagen staan
+-- LDL: Waarde tov MP
+
 
  
  
@@ -89,6 +107,7 @@ fExprCon (KeyFalse) env va = [LDC 0]
 fExprCon (UpperCh c) env va = [LDC (ord c)]
 fExprCon (LowerCh c) env va = [LDC (ord c)]
 
+
 fExprVar :: Token -> Env -> ValueOrAddress -> Code
 fExprVar t env va = case va of
                         Value -> [LDL (snd(env ! t))]
@@ -115,4 +134,22 @@ opCodes = fromList [ ("+", ADD), ("-", SUB),  ("*", MUL), ("/", DIV), ("%", MOD)
                    , ("<=", LE), (">=", GE),  ("<", LT),  (">", GT),  ("==", EQ)
                    , ("!=", NE), ("&&", AND), ("||", OR), ("^", XOR)
                    ]
+{-=======
+fExprOp :: Token -> (ValueOrAddress -> Code) -> (ValueOrAddress -> Code) -> ValueOrAddress -> Code
+fExprOp (Operator "=") e1 e2 va = e2 Value ++ [LDS 0] ++ e1 Address ++ [STA 0] -- x = 3 LDS = LoadStack: laad value op SP STA: 
+-- LDC 3 LDC1 ADD LDS 0 LDLA 37 STA 0 
+{-fExprOp (Operator "+=") e1 e2 va = -- Laadt waarde van e1 ++ e2 Value ++ [ADD, LDS 0] ++ e1 Address ++ [STA 0]
+fExprOp (Operator "-=") e1 e2 va = -- Laadt waarde van e1 ++ e2 Value ++ [SUB, LDS 0] ++ e1 Address ++ [STA 0]
+fExprOp (Operator "*=") e1 e2 va = -- Laadt waarde van e1 ++ e2 Value ++ [MUL, LDS 0] ++ e1 Address ++ [STA 0]
+fExprOp (Operator "/=") e1 e2 va = -- Laadt waarde van e1 ++ e2 Value ++ [DIV, LDS 0] ++ e1 Address ++ [STA 0]-}
+fExprOp (Operator op)  e1 e2 va = e1 Value ++ e2 Value ++ (opCodes ! op)
+
+
+opCodes :: Map String [Instr]
+opCodes = fromList [ ("+", [ADD]), ("-", [SUB]),  ("*", [MUL]), ("/", [DIV]), ("%", [MOD])
+                   , ("<=", [LE]), (">=", [GE]),  ("<", [LT]),  (">", [GT]),  ("==", [EQ])
+                   , ("!=", [NE]), ("&&", [AND]), ("||", [OR]), ("^", [XOR]), ("++", [LDC 1, ADD])
+                   , ("--", [LDC 1, SUB])
+                   ] -- ++ += *= -- -= -- Aparte fExprOp voor alle operaties??
+>>>>>>> origin/master-}
 
