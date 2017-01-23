@@ -24,7 +24,7 @@ data Token = POpen    | PClose      -- parentheses     ()
            | UpperCh   Char
            | LowerCh   Char
            | ConstInt  Int
-           deriving (Eq, Show)
+           deriving (Eq, Show, Ord)
 
 keyword :: String -> Parser Char String
 keyword [] = succeed ""

@@ -25,6 +25,7 @@ data Stat = StatDecl   Decl
 data Expr = ExprConst  Token
           | ExprVar    Token
           | ExprOper   Token Expr Expr
+          | ExprMeth   Token [Expr]
           deriving Show
 
 data Decl = Decl Type Token
@@ -45,6 +46,7 @@ pExprSimple :: Parser Token Expr
 pExprSimple =  ExprConst <$> sConst
            <|> ExprVar   <$> sLowerId
            <|> parenthesised (pExpr 0)
+           <|> pMethCall
 
 pExpr :: Int -> Parser Token Expr
 pExpr n | n <= 7 = chainl (pExpr (n+1)) (ExprOper <$> (pOperator n))
@@ -86,6 +88,9 @@ pStat =  StatExpr <$> (pExpr 0) <*  sSemi
 pBlock :: Parser Token Stat
 pBlock = StatBlock <$> braced (many pStatDecl)
 
+pMethCall :: Parser Token Expr
+pMethCall = ExprMeth <$> sLowerId <*> parenthesised pArguments
+          where pArguments = listOf (pExpr 1) (symbol Comma)
 
 pMeth :: Parser Token Member
 pMeth = MemberM <$> methRetType <*> sLowerId <*> methArgList <*> pBlock

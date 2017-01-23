@@ -1,38 +1,20 @@
 class Hello
 {
     int g;
+    int a;
     
     void main()
     {
         int b;
-        print(4+3*5+2 || 3*4);
-        square(3);
+        b=3; 
+        //3*4;
+        square(square(1,1,1),2,2);
     }
     
-    int square( int x )
+    int square( int x, int y, int z )
     {
-        int y;
-        y = x*x;
-        return y;   
+        x=3;
+        return z+x*y;   
     }
 
-    int abs(int x)
-    {
-    	
-        if (x<0)
-            x = 0-x;
-        return x;
-    }
-    
-    int fac(int x)
-    {
-        int r; int t;
-        t=1; r=1;
-        while (t<=x)
-        {
-            r = r*t;
-            t = t+1;
-        }
-        return r;
-   }
 }

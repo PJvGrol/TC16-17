@@ -12,67 +12,103 @@ import Data.Char
 data ValueOrAddress = Value | Address
     deriving Show
 
-codeAlgebra :: CSharpAlgebra Code Code Code (ValueOrAddress -> Code)
+type Env = Map Token (Loc, Int)--[(Token,(Loc,Int))]
+data Loc = Mem | Lcl 
+    
+codeAlgebra :: CSharpAlgebra Code Code (Env -> (Env, Code)) (Env -> ValueOrAddress -> Code)
 codeAlgebra =
     ( fClas
     , (fMembDecl, fMembMeth)
     , (fStatDecl, fStatExpr, fStatIf, fStatWhile, fStatReturn, fPrint, fStatBlock)
-    , (fExprCon, fExprVar, fExprOp)
+    , (fExprCon, fExprVar, fExprOp, fMethCall)
     )
 
 fClas :: Token -> [Code] -> Code
 fClas c ms = [Bsr "main", HALT] ++ concat ms
 
-fMembDecl :: Decl -> Code
-fMembDecl d = []
+numberOfDecls :: Member -> Int
+numberOfDecls = undefined --(MemberM )
 
-fMembMeth :: Type -> Token -> [Decl] -> Code -> Code
-fMembMeth t (LowerId x) ps s = [LABEL x] ++ s ++ [RET] -- TODO: something with ps
+fMembDecl :: Decl -> Code
+fMembDecl d = [TRAP 0]
+
+fMembMeth :: Type -> Token -> [Decl] -> (Env -> (Env, Code)) -> Code
+fMembMeth t (LowerId x) ps s = [LABEL x, LINK 0] ++ snd(s env) ++ [UNLINK, RET] 
+                             where f ps = Prelude.foldr op [] ps
+                                   op (Decl tp tk) xs = fExprCon (ConstInt 3) env Value ++ xs
+                                   env = Prelude.foldr op2 empty ps
+                                   op2 (Decl tp tk) mp = M.insert tk (Lcl,(-1)*(size mp)-2) mp
+-- TODO: something with ps
  -- Ga variabelen opslaan, houd bij waar ze opgeslagen staan
 
-fStatDecl :: Decl -> Code
-fStatDecl d = []
+ 
+ 
+fStatDecl :: Decl -> Env -> (Env,Code)
+fStatDecl (Decl t tk) env = let (vars, code) = (M.insert tk (Lcl, length env + 1) env, [LABEL (show tk), AJS 1])--((tk,(Lcl,length env + 1)):env)
+                            in (vars, code)
 
-fStatExpr :: (ValueOrAddress -> Code) -> Code
-fStatExpr e = e Value ++ [pop]
+f :: Env -> Code
+f = undefined                            
+                            
+fStatExpr :: (Env -> ValueOrAddress -> Code) -> Env -> (Env,Code)
+fStatExpr exp env = (env, exp env Value) {-(f env, e Value ++ [pop])
+                where f = case lookup env -}
 
-fStatIf :: (ValueOrAddress -> Code) -> Code -> Code -> Code
-fStatIf e s1 s2 = c ++ [BRF (n1 + 2)] ++ s1 ++ [BRA n2] ++ s2
+fStatIf :: (Env -> ValueOrAddress -> Code) -> (Env -> (Env,Code)) -> (Env -> (Env,Code)) -> Env -> (Env,Code)
+fStatIf e s1 s2 env = (env, c ++ [BRF (n1 + 2)] ++ d ++ [BRA n2] ++ d2)
     where
-        c        = e Value
-        (n1, n2) = (codeSize s1, codeSize s2)
+        c        = e env Value
+        (n1, n2) = (codeSize d, codeSize d2)
+        d        = snd(s1 env)
+        d2       = snd(s2 env)
 
-fStatWhile :: (ValueOrAddress -> Code) -> Code -> Code
-fStatWhile e s1 = [BRA n] ++ s1 ++ c ++ [BRT (-(n + k + 2))]
+fStatWhile :: (Env -> ValueOrAddress -> Code) -> (Env -> (Env,Code)) -> Env -> (Env,Code)
+fStatWhile e s1 env = (env, [BRA n] ++ d ++ c ++ [BRT (-(n + k + 2))])
     where
-        c = e Value
-        (n, k) = (codeSize s1, codeSize c)
+        c = e env Value
+        (n, k) = (codeSize d, codeSize c)
+        d = snd(s1 env)
 
-fStatReturn :: (ValueOrAddress -> Code) -> Code
-fStatReturn e = e Value ++ [pop] ++ [RET]
+fStatReturn :: (Env -> ValueOrAddress -> Code) -> Env -> (Env,Code)
+fStatReturn e env = (env, e env Value ++ [STR R4])
 
-fPrint :: (ValueOrAddress -> Code) -> Code
-fPrint e = e Value ++ [TRAP 0]
+fPrint :: (Env -> ValueOrAddress -> Code) -> Env -> (Env,Code)
+fPrint e env = (env, e env Value ++ [TRAP 0])
 
-fStatBlock :: [Code] -> Code
-fStatBlock = concat
+fStatBlock :: [Env -> (Env,Code)] -> Env -> (Env,Code)
+fStatBlock xs env = (env, concat(Prelude.map snd (temp xs env)))
 
-fExprCon :: Token -> ValueOrAddress -> Code
-fExprCon (ConstInt n) va = [LDC n]
-fExprCon (KeyTrue) va = [LDC 1]
-fExprCon (KeyFalse) va = [LDC 0]
-fExprCon (UpperCh c) va = [LDC (ord c)]
-fExprCon (LowerCh c) va = [LDC (ord c)]
+temp :: [Env -> (Env,Code)] -> Env -> [(Env,Code)]
+temp xs env = Prelude.foldr op [] xs
+            where op a b = a env : b
 
-fExprVar :: Token -> ValueOrAddress -> Code
-fExprVar (LowerId x) va = let loc = 37 in case va of
+fExprCon :: Token -> Env -> ValueOrAddress -> Code
+fExprCon (ConstInt n) env va = [LDC n]
+fExprCon (KeyTrue) env va = [LDC 1]
+fExprCon (KeyFalse) env va = [LDC 0]
+fExprCon (UpperCh c) env va = [LDC (ord c)]
+fExprCon (LowerCh c) env va = [LDC (ord c)]
+
+fExprVar :: Token -> Env -> ValueOrAddress -> Code
+fExprVar t env va = case va of
+                        Value -> [LDL (snd(env ! t))]
+                        Address -> [LABEL (show t), LABEL ((show.size) env)]--[STL (snd(env ! t))]
+                                    
+
+{-let loc = 37 in case va of
                                               Value    ->  [LDL  loc]
-                                              Address  ->  [LDLA loc]
+                                              Address  ->  [LDLA loc]-}
+{-fExprVar t@(LowerId x) env va = undefined let loc = fromJust (lookup t env) in case va of
+                                                           Value    ->  (,[LDL  loc])
+                                                           Address  ->  (,[LDLA loc]) -}
 
-fExprOp :: Token -> (ValueOrAddress -> Code) -> (ValueOrAddress -> Code) -> ValueOrAddress -> Code
-fExprOp (Operator "=") e1 e2 va = e2 Value ++ [LDS 0] ++ e1 Address ++ [STA 0]
-fExprOp (Operator op)  e1 e2 va = e1 Value ++ e2 Value ++ [opCodes ! op]
+fExprOp :: Token -> (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> Env -> ValueOrAddress -> Code
+fExprOp (Operator "=") e1 e2 env va = e2 env Value ++ e1 env Address
+fExprOp (Operator op)  e1 e2 env va = e1 env Value ++ e2 env Value ++ [opCodes ! op]
 
+fMethCall :: Token -> [Env -> ValueOrAddress -> Code] -> Env -> ValueOrAddress -> Code
+fMethCall (LowerId x) xs env va = Prelude.foldr op [Bsr x, AJS (-(length xs)), LDR R4] xs --[LDL 10, Bsr x]
+                                where op f c = f env Value ++ c
 
 opCodes :: Map String Instr
 opCodes = fromList [ ("+", ADD), ("-", SUB),  ("*", MUL), ("/", DIV), ("%", MOD)
