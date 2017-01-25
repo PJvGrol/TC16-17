@@ -1,37 +1,20 @@
 	Bsr main
 	HALT
-	TRAP 0
-	TRAP 0
 main:
-	LINK 0
-LowerId b:
-	AJS 1
-	LDC 3
-LowerId b:
-0:
-	LDC 1
-	LDC 1
-	LDC 1
-	Bsr square
-	AJS -3
-	LDR R4
-	LDC 2
-	LDC 2
-	Bsr square
-	AJS -3
-	LDR R4
+111:
+	LINK 3
+	LDC 97
+	TRAP 0
 	UNLINK
 	RET
 square:
-	LINK 0
-	LDC 3
-LowerId x:
-3:
+1-2:
+	LINK 1
 	LDL -2
-	LDL -4
-	LDL -3
+	LDL -2
 	MUL
-	ADD
+	STL 1
+	LDL 1
 	STR R4
 	UNLINK
 	RET

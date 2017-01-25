@@ -6,16 +6,16 @@ class Hello
     void main()
     {
         int b;
-        int a;
-        b=3; 
-        //3*4;
-        square(square(1,1,1),2,2);
+        int c;
+        int d;
+        print('a');
     }
     
-    int square( int x, int y, int z )
+    int square( int x)
     {
-        x=3;
-        return z+x*y;   
+        int b;
+        b=x*x;
+        return b;   
     }
 
 }

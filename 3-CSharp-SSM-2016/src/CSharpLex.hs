@@ -25,6 +25,7 @@ data Token = POpen    | PClose      -- parentheses     ()
            | UpperCh   Char
            | LowerCh   Char
            | ConstInt  Int
+           | Apostrof
            deriving (Eq, Show, Ord)
 
 keyword :: String -> Parser Char String
@@ -47,6 +48,7 @@ terminals =
     , ( SClose    , "]"      )
     , ( COpen     , "{"      )
     , ( CClose    , "}"      )
+    , ( Apostrof  , "\'"     )
     , ( Comma     , ","      )
     , ( Semicolon , ";"      )
     , ( KeyIf     , "if"     )
@@ -152,6 +154,17 @@ sOperator = satisfy isOperator
     where isOperator (Operator _) = True
           isOperator _            = False
 
+sBool :: Parser Token Token
+sBool = satisfy isBool
+      where isBool (KeyFalse) = True
+            isBool (KeyTrue)  = True
+            isBool _          = False
+            
+sChar :: Parser Token Token
+sChar = satisfy isChar
+      where isChar (LowerId _) = True
+            isChar (UpperId _) = True
+            isChar _           = False
 
 sSemi :: Parser Token Token
 sSemi =  symbol Semicolon

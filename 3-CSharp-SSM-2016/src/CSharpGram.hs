@@ -48,6 +48,8 @@ pExprSimple =  ExprConst <$> sConst
            <|> ExprVar   <$> sLowerId
            <|> parenthesised (pExpr 0)
            <|> pMethCall
+           <|> ExprConst <$> sBool
+           <|> ExprConst <$ symbol Apostrof <*> sChar <* symbol Apostrof
 
 pExpr :: Int -> Parser Token Expr
 pExpr n | n <= 7 = chainl (pExpr (n+1)) (ExprOper <$> (pOperator n))

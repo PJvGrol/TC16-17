@@ -1,7 +1,7 @@
 module CSharpCode where
 
 import Prelude hiding (LT, GT, EQ)
-import Data.Map as M
+import qualified Data.Map as M
 import CSharpLex
 import CSharpGram
 import CSharpAlgebra
@@ -12,7 +12,7 @@ import Data.Char
 data ValueOrAddress = Value | Address
     deriving Show
 
-type Env = Map Token (Loc, Int)--[(Token,(Loc,Int))]
+type Env = M.Map Token (Loc, Int)--[(Token,(Loc,Int))]
 
 data Loc = Mem | Lcl | Param
         deriving Eq
@@ -32,15 +32,15 @@ numberOfDecls :: Member -> Int
 numberOfDecls = undefined --(MemberM )
 
 fMembDecl :: Decl -> Code
-fMembDecl d = [TRAP 0]
+fMembDecl d = []
 
 
 fMembMeth :: Type -> Token -> [Decl] -> (Env -> Env -> (Env, Code)) -> Code
-fMembMeth t (LowerId x) ps s = [LABEL x, LINK (length env2 - length ps)] ++ snd(s env env2) ++ [UNLINK, RET] 
+fMembMeth t (LowerId x) ps s = [LABEL x, LABEL ((concat.map show.map snd)(M.elems env2)),LINK (length env2 - length ps)] ++ snd(s env env2) ++ [UNLINK, RET] 
                              where {-f ps = Prelude.foldr op [] ps
                                    op (Decl tp tk) xs = fExprCon (ConstInt 3) env Value ++ xs-}
-                                   env = Prelude.foldr op2 empty ps
-                                   op2 (Decl tp tk) mp = M.insert tk (Lcl,(-1)*(size mp)-2) mp
+                                   env = foldr op2 M.empty ps
+                                   op2 (Decl tp tk) mp = M.insert tk (Param,(-1)*(M.size mp)-2) mp
                                    (env2,code) = s env env2
 -- TODO: something with ps
  -- Ga variabelen opslaan, houd bij waar ze opgeslagen staan
@@ -67,8 +67,8 @@ declToToken (Decl tp tk) = tk-}
  
 
 fStatDecl :: Decl -> Env -> Env -> (Env,Code)
-fStatDecl (Decl t tk) env env2 = let (env, code) = (M.insert tk (Lcl, nrOfLoc Lcl env) env, [LABEL (show tk), AJS 1])--((tk,(Lcl,length env + 1)):env)
-                                 in (env, code)
+fStatDecl (Decl t tk) env env2 = (M.insert tk (Lcl, nrOfLoc Lcl env + 1) env, [])--((tk,(Lcl,length env + 1)):env)
+                                 
 -- length env + 1 moet anders -> param op -2, -3 etc, locals op 1, 2, 3 etc.
                                  
                                  
@@ -82,7 +82,7 @@ fStatExpr exp env env2 = (env, exp env2 Value) {-(f env, e Value ++ [pop])-}
 
                             
 nrOfLoc :: Loc -> Env -> Int
-nrOfLoc loc env = size (fst (M.partition (\(x,y)-> x == loc) env))
+nrOfLoc loc env = M.size (fst (M.partition (\(x,y)-> x == loc) env))
                             
 fStatIf :: (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env,Code)) -> (Env -> Env -> (Env,Code)) -> Env -> Env -> (Env,Code)
 fStatIf e s1 s2 env env2 = (env, c ++ [BRF (n1 + 2)] ++ d ++ [BRA n2] ++ d2)
@@ -106,7 +106,8 @@ fPrint :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
 fPrint e env env2 = (env, e env2 Value ++ [TRAP 0])
 
 fStatBlock :: [Env -> Env -> (Env,Code)] -> Env -> Env -> (Env,Code)
-fStatBlock xs env env2 = (env, concat(Prelude.map snd (temp xs env env2)))
+fStatBlock xs env env2 = (M.unions(map fst ys), concat(map snd ys))
+                       where ys = temp xs env env2
 
 temp :: [Env -> Env -> (Env,Code)] -> Env -> Env -> [(Env,Code)]
 temp xs env env2 = Prelude.foldr op [] xs
@@ -116,14 +117,14 @@ fExprCon :: Token -> Env -> ValueOrAddress -> Code
 fExprCon (ConstInt n) env va = [LDC n]
 fExprCon (KeyTrue) env va = [LDC 1]
 fExprCon (KeyFalse) env va = [LDC 0]
-fExprCon (UpperCh c) env va = [LDC (ord c)]
-fExprCon (LowerCh c) env va = [LDC (ord c)]
+fExprCon (UpperId c) env va = [LDC (ord (head c))]
+fExprCon (LowerId c) env va = [LDC (ord (head c))]
 
 
 fExprVar :: Token -> Env -> ValueOrAddress -> Code
 fExprVar t env va = case va of
-                        Value -> [LDL (snd(env ! t))]
-                        Address -> [LABEL (show t), LABEL ((show.size) env)]--[STL (snd(env ! t))]
+                        Value ->   [LDL (snd(env M.! t))]
+                        Address -> [STL (snd(env M.! t))] --[LABEL (show t), LABEL ((show . M.size) env)]--
                                     
 
 {-let loc = 37 in case va of
@@ -135,14 +136,16 @@ fExprVar t env va = case va of
 
 fExprOp :: Token -> (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> Env -> ValueOrAddress -> Code
 fExprOp (Operator "=") e1 e2 env va = e2 env Value ++ e1 env Address
-fExprOp (Operator op)  e1 e2 env va = e1 env Value ++ e2 env Value ++ [opCodes ! op]
+fExprOp (Operator op)  e1 e2 env va = e1 env Value ++ e2 env Value ++ [opCodes M.! op]
 
 fMethCall :: Token -> [Env -> ValueOrAddress -> Code] -> Env -> ValueOrAddress -> Code
 fMethCall (LowerId x) xs env va = Prelude.foldr op [Bsr x, AJS (-(length xs)), LDR R4] xs --[LDL 10, Bsr x]
                                 where op f c = f env Value ++ c
 
-opCodes :: Map String Instr
-opCodes = fromList [ ("+", ADD), ("-", SUB),  ("*", MUL), ("/", DIV), ("%", MOD)
+fExprBool = undefined                                
+                                
+opCodes :: M.Map String Instr
+opCodes = M.fromList [ ("+", ADD), ("-", SUB),  ("*", MUL), ("/", DIV), ("%", MOD)
                    , ("<=", LE), (">=", GE),  ("<", LT),  (">", GT),  ("==", EQ)
                    , ("!=", NE), ("&&", AND), ("||", OR), ("^", XOR)
                    ]
