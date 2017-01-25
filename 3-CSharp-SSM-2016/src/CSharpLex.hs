@@ -63,7 +63,6 @@ terminals =
     , ( KeyFalse  , "false"  )
     ]
 
-
 lexWhiteSpace :: Parser Char ()
 lexWhiteSpace = () <$ greedy ((() <$ satisfy isSpace) <|> lexSingleComment <|> lexMultipleComment)
 
@@ -118,7 +117,6 @@ lexToken = greedyChoice
 lexicalScanner :: Parser Char [Token]
 lexicalScanner = lexWhiteSpace *> greedy (lexToken <* lexWhiteSpace) <* eof
 
-
 sStdType :: Parser Token Token
 sStdType = satisfy isStdType
     where isStdType (StdType _) = True
@@ -153,7 +151,6 @@ sOperator :: Parser Token Token
 sOperator = satisfy isOperator
     where isOperator (Operator _) = True
           isOperator _            = False
-
 
 sSemi :: Parser Token Token
 sSemi =  symbol Semicolon
