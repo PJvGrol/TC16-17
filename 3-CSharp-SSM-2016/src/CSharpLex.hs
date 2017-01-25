@@ -92,8 +92,10 @@ lexSingleComment :: Parser Char ()
 lexSingleComment = () <$ token "//" <* greedy(satisfy (/= '\n'))
 
 lexMultipleComment :: Parser Char ()
-lexMultipleComment = () <$ token "/*" <* greedy(token "*/")
+lexMultipleComment = () <$ token "/*" <* lexToEndMC
 
+lexToEndMC :: Parser Char String
+lexToEndMC = token "*/" <<|> (:) <$> anySymbol <*> lexToEndMC
 
 stdTypes :: [String]
 stdTypes = ["int", "long", "double", "float", "byte", "short", "bool", "char"]
