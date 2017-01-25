@@ -17,7 +17,7 @@ data Stat = StatDecl   Decl
           | StatExpr   Expr
           | StatIf     Expr Stat Stat
           | StatWhile  Expr Stat
-          | StatFor    Expr Stat Stat Stat
+          | StatFor    Stat Stat
           | StatReturn Expr
           | StatPrint  Expr
           | StatBlock  [Stat]
@@ -83,12 +83,11 @@ pStat :: Parser Token Stat
 pStat =  StatExpr <$> (pExpr 0) <*  sSemi
      <|> StatIf     <$ symbol KeyIf     <*> parenthesised (pExpr 0) <*> pStat <*> optionalElse
      <|> StatWhile  <$ symbol KeyWhile  <*> parenthesised (pExpr 0) <*> pStat
-     -- <|> StatFor    <$ symbol KeyFor    <*> parenthesised
+     <|> StatFor    <$ symbol KeyFor    <*> parenthesised (pStat)   <*> pStat
      <|> StatReturn <$ symbol KeyReturn <*> (pExpr 0)               <*  sSemi
      <|> StatPrint  <$ symbol KeyPrint  <*> parenthesised (pExpr 0) <*  sSemi
      <|> pBlock
      where optionalElse = option ((\_ x -> x) <$> symbol KeyElse <*> pStat) (StatBlock [])
-
 
 pBlock :: Parser Token Stat
 pBlock = StatBlock <$> braced (many pStatDecl)
@@ -110,7 +109,6 @@ pType0 =  TypePrim <$> sStdType
 pType :: Parser Token Type
 pType = foldr (const TypeArray) <$> pType0 <*> many (bracketed (succeed ()))
 
-
 pDecl :: Parser Token Decl
 pDecl = Decl <$> pType <*> sLowerId
 
@@ -119,4 +117,3 @@ pDeclSemi = const <$> pDecl <*> sSemi
 
 pClass :: Parser Token Class
 pClass = Class <$ symbol KeyClass <*> sUpperId <*> braced (many pMember)
-

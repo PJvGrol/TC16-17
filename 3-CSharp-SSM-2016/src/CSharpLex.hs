@@ -65,7 +65,6 @@ terminals =
     , ( KeyFalse  , "false"  )
     ]
 
-
 lexWhiteSpace :: Parser Char ()
 lexWhiteSpace = () <$ greedy ((() <$ satisfy isSpace) <|> lexSingleComment <|> lexMultipleComment)
 
@@ -94,8 +93,10 @@ lexSingleComment :: Parser Char ()
 lexSingleComment = () <$ token "//" <* greedy(satisfy (/= '\n'))
 
 lexMultipleComment :: Parser Char ()
-lexMultipleComment = () <$ token "/*" <* greedy(token "*/")
+lexMultipleComment = () <$ token "/*" <* lexToEndMC
 
+lexToEndMC :: Parser Char String
+lexToEndMC = token "*/" <<|> (:) <$> anySymbol <*> lexToEndMC
 
 stdTypes :: [String]
 stdTypes = ["int", "long", "double", "float", "byte", "short", "bool", "char"]
@@ -117,7 +118,6 @@ lexToken = greedyChoice
 
 lexicalScanner :: Parser Char [Token]
 lexicalScanner = lexWhiteSpace *> greedy (lexToken <* lexWhiteSpace) <* eof
-
 
 sStdType :: Parser Token Token
 sStdType = satisfy isStdType
