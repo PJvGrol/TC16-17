@@ -13,7 +13,9 @@ data ValueOrAddress = Value | Address
     deriving Show
 
 type Env = Map Token (Loc, Int)--[(Token,(Loc,Int))]
+
 data Loc = Mem | Lcl | Param
+        deriving Eq
     
 codeAlgebra :: CSharpAlgebra Code Code (Env -> Env -> (Env, Code)) (Env -> ValueOrAddress -> Code)
 codeAlgebra =
@@ -32,10 +34,11 @@ numberOfDecls = undefined --(MemberM )
 fMembDecl :: Decl -> Code
 fMembDecl d = [TRAP 0]
 
+
 fMembMeth :: Type -> Token -> [Decl] -> (Env -> Env -> (Env, Code)) -> Code
 fMembMeth t (LowerId x) ps s = [LABEL x, LINK (length env2 - length ps)] ++ snd(s env env2) ++ [UNLINK, RET] 
-                             where f ps = Prelude.foldr op [] ps
-                                   op (Decl tp tk) xs = fExprCon (ConstInt 3) env Value ++ xs
+                             where {-f ps = Prelude.foldr op [] ps
+                                   op (Decl tp tk) xs = fExprCon (ConstInt 3) env Value ++ xs-}
                                    env = Prelude.foldr op2 empty ps
                                    op2 (Decl tp tk) mp = M.insert tk (Lcl,(-1)*(size mp)-2) mp
                                    (env2,code) = s env env2
@@ -62,17 +65,25 @@ declToToken (Decl tp tk) = tk-}
 
  
  
-fStatDecl :: Decl -> Env -> Env -> (Env,Code)
-fStatDecl (Decl t tk) env env2 = let (env, code) = (M.insert tk (Lcl, length env + 1) env, [LABEL (show tk), AJS 1])--((tk,(Lcl,length env + 1)):env)
-                                 in (env, code)
 
+fStatDecl :: Decl -> Env -> Env -> (Env,Code)
+fStatDecl (Decl t tk) env env2 = let (env, code) = (M.insert tk (Lcl, nrOfLoc Lcl env) env, [LABEL (show tk), AJS 1])--((tk,(Lcl,length env + 1)):env)
+                                 in (env, code)
+-- length env + 1 moet anders -> param op -2, -3 etc, locals op 1, 2, 3 etc.
+                                 
+                                 
 f :: Env -> Code
 f = undefined
                   
 fStatExpr :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
-fStatExpr exp env env2 = (env, exp env2 Value) {-(f env, e Value ++ [pop])
-                where f = case lookup env -}
+fStatExpr exp env env2 = (env, exp env2 Value) {-(f env, e Value ++ [pop])-}
 
+
+
+                            
+nrOfLoc :: Loc -> Env -> Int
+nrOfLoc loc env = size (fst (M.partition (\(x,y)-> x == loc) env))
+                            
 fStatIf :: (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env,Code)) -> (Env -> Env -> (Env,Code)) -> Env -> Env -> (Env,Code)
 fStatIf e s1 s2 env env2 = (env, c ++ [BRF (n1 + 2)] ++ d ++ [BRA n2] ++ d2)
     where

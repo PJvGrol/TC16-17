@@ -6,6 +6,7 @@ class Hello
     void main()
     {
         int b;
+        int a;
         b=3; 
         //3*4;
         square(square(1,1,1),2,2);
