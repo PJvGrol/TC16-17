@@ -13,9 +13,9 @@ data ValueOrAddress = Value | Address
     deriving Show
 
 type Env = Map Token (Loc, Int)--[(Token,(Loc,Int))]
-data Loc = Mem | Lcl 
+data Loc = Mem | Lcl | Param
     
-codeAlgebra :: CSharpAlgebra Code Code (Env -> (Env, Code)) (Env -> ValueOrAddress -> Code)
+codeAlgebra :: CSharpAlgebra Code Code (Env -> Env -> (Env, Code)) (Env -> ValueOrAddress -> Code)
 codeAlgebra =
     ( fClas
     , (fMembDecl, fMembMeth)
@@ -32,12 +32,13 @@ numberOfDecls = undefined --(MemberM )
 fMembDecl :: Decl -> Code
 fMembDecl d = [TRAP 0]
 
-fMembMeth :: Type -> Token -> [Decl] -> (Env -> (Env, Code)) -> Code
-fMembMeth t (LowerId x) ps s = [LABEL x, LINK 0] ++ snd(s env) ++ [UNLINK, RET] 
+fMembMeth :: Type -> Token -> [Decl] -> (Env -> Env -> (Env, Code)) -> Code
+fMembMeth t (LowerId x) ps s = [LABEL x, LINK (length env2 - length ps)] ++ snd(s env env2) ++ [UNLINK, RET] 
                              where f ps = Prelude.foldr op [] ps
                                    op (Decl tp tk) xs = fExprCon (ConstInt 3) env Value ++ xs
                                    env = Prelude.foldr op2 empty ps
                                    op2 (Decl tp tk) mp = M.insert tk (Lcl,(-1)*(size mp)-2) mp
+                                   (env2,code) = s env env2
 -- TODO: something with ps
  -- Ga variabelen opslaan, houd bij waar ze opgeslagen staan
 {-=======
@@ -61,44 +62,44 @@ declToToken (Decl tp tk) = tk-}
 
  
  
-fStatDecl :: Decl -> Env -> (Env,Code)
-fStatDecl (Decl t tk) env = let (vars, code) = (M.insert tk (Lcl, length env + 1) env, [LABEL (show tk), AJS 1])--((tk,(Lcl,length env + 1)):env)
-                            in (vars, code)
+fStatDecl :: Decl -> Env -> Env -> (Env,Code)
+fStatDecl (Decl t tk) env env2 = let (env, code) = (M.insert tk (Lcl, length env + 1) env, [LABEL (show tk), AJS 1])--((tk,(Lcl,length env + 1)):env)
+                                 in (env, code)
 
 f :: Env -> Code
-f = undefined                            
-                            
-fStatExpr :: (Env -> ValueOrAddress -> Code) -> Env -> (Env,Code)
-fStatExpr exp env = (env, exp env Value) {-(f env, e Value ++ [pop])
+f = undefined
+                  
+fStatExpr :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
+fStatExpr exp env env2 = (env, exp env2 Value) {-(f env, e Value ++ [pop])
                 where f = case lookup env -}
 
-fStatIf :: (Env -> ValueOrAddress -> Code) -> (Env -> (Env,Code)) -> (Env -> (Env,Code)) -> Env -> (Env,Code)
-fStatIf e s1 s2 env = (env, c ++ [BRF (n1 + 2)] ++ d ++ [BRA n2] ++ d2)
+fStatIf :: (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env,Code)) -> (Env -> Env -> (Env,Code)) -> Env -> Env -> (Env,Code)
+fStatIf e s1 s2 env env2 = (env, c ++ [BRF (n1 + 2)] ++ d ++ [BRA n2] ++ d2)
     where
-        c        = e env Value
+        c        = e env2 Value
         (n1, n2) = (codeSize d, codeSize d2)
-        d        = snd(s1 env)
-        d2       = snd(s2 env)
+        d        = snd(s1 env env2)
+        d2       = snd(s2 env env2)
 
-fStatWhile :: (Env -> ValueOrAddress -> Code) -> (Env -> (Env,Code)) -> Env -> (Env,Code)
-fStatWhile e s1 env = (env, [BRA n] ++ d ++ c ++ [BRT (-(n + k + 2))])
+fStatWhile :: (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env,Code)) -> Env -> Env -> (Env,Code)
+fStatWhile e s1 env env2 = (env, [BRA n] ++ d ++ c ++ [BRT (-(n + k + 2))])
     where
-        c = e env Value
+        c = e env2 Value
         (n, k) = (codeSize d, codeSize c)
-        d = snd(s1 env)
+        d = snd(s1 env env2)
 
-fStatReturn :: (Env -> ValueOrAddress -> Code) -> Env -> (Env,Code)
-fStatReturn e env = (env, e env Value ++ [STR R4])
+fStatReturn :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
+fStatReturn e env env2 = (env, e env2 Value ++ [STR R4])
 
-fPrint :: (Env -> ValueOrAddress -> Code) -> Env -> (Env,Code)
-fPrint e env = (env, e env Value ++ [TRAP 0])
+fPrint :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
+fPrint e env env2 = (env, e env2 Value ++ [TRAP 0])
 
-fStatBlock :: [Env -> (Env,Code)] -> Env -> (Env,Code)
-fStatBlock xs env = (env, concat(Prelude.map snd (temp xs env)))
+fStatBlock :: [Env -> Env -> (Env,Code)] -> Env -> Env -> (Env,Code)
+fStatBlock xs env env2 = (env, concat(Prelude.map snd (temp xs env env2)))
 
-temp :: [Env -> (Env,Code)] -> Env -> [(Env,Code)]
-temp xs env = Prelude.foldr op [] xs
-            where op a b = a env : b
+temp :: [Env -> Env -> (Env,Code)] -> Env -> Env -> [(Env,Code)]
+temp xs env env2 = Prelude.foldr op [] xs
+            where op a b = a env env2: b
 
 fExprCon :: Token -> Env -> ValueOrAddress -> Code
 fExprCon (ConstInt n) env va = [LDC n]
