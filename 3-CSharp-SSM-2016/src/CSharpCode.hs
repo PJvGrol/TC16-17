@@ -32,7 +32,7 @@ fMembDecl :: Decl -> Code
 fMembDecl d = []
 
 fMembMeth :: Type -> Token -> [Decl] -> (Env -> Env -> (Env, Code)) -> Code
-fMembMeth t (LowerId x) ps s = [LABEL x, LABEL ((concat.map show.map snd)(M.elems env2)),LINK (length env2 - length ps)] ++ snd(s env env2) ++ [UNLINK, RET] 
+fMembMeth t (LowerId x) ps s = [LABEL x, LINK (length env2 - length ps)] ++ snd(s env env2) ++ [UNLINK, RET] 
                              where {-f ps = Prelude.foldr op [] ps
                                    op (Decl tp tk) xs = fExprCon (ConstInt 3) env Value ++ xs-}
                                    env = foldr op2 M.empty ps
@@ -56,19 +56,19 @@ nrOfLoc :: Loc -> Env -> Int
 nrOfLoc loc env = M.size (fst (M.partition (\(x,y)-> x == loc) env))
                             
 fStatIf :: (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env,Code)) -> (Env -> Env -> (Env,Code)) -> Env -> Env -> (Env,Code)
-fStatIf e s1 s2 env env2 = (env, c ++ [BRF (n1 + 2)] ++ d ++ [BRA n2] ++ d2)
+fStatIf e s1 s2 env env2 = (combine [env,env3,env4], c ++ [BRF (n1 + 2)] ++ d ++ [BRA n2] ++ d2)
     where
-        c        = e env2 Value
-        (n1, n2) = (codeSize d, codeSize d2)
-        d        = snd(s1 env env2)
-        d2       = snd(s2 env env2)
+        c         = e env2 Value
+        (n1, n2)  = (codeSize d, codeSize d2)
+        (env3,d)  = s1 env env2
+        (env4,d2) = s2 env env2
 
 fStatWhile :: (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env,Code)) -> Env -> Env -> (Env,Code)
-fStatWhile e s1 env env2 = (env, [BRA n] ++ d ++ c ++ [BRT (-(n + k + 2))])
+fStatWhile e s1 env env2 = (combine [env,env3], [BRA n] ++ d ++ c ++ [BRT (-(n + k + 2))])
     where
-        c = e env2 Value
-        (n, k) = (codeSize d, codeSize c)
-        d = snd(s1 env env2)
+        c        = e env2 Value
+        (n, k)   = (codeSize d, codeSize c)
+        (env3,d) = s1 env env2
 
 fStatReturn :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
 fStatReturn e env env2 = (env, e env2 Value ++ [STR R4])
@@ -77,9 +77,21 @@ fPrint :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
 fPrint e env env2 = (env, e env2 Value ++ [TRAP 0])
 
 fStatBlock :: [Env -> Env -> (Env,Code)] -> Env -> Env -> (Env,Code)
-fStatBlock xs env env2 = (M.unions(map fst ys), concat(map snd ys))
+fStatBlock xs env env2 = (combine(map fst ys), concat(map snd ys))
                        where ys = temp xs env env2
 
+combine :: [Env] -> Env
+combine xs = snd ( M.mapAccum accum 0 (M.unions xs))
+            where accum :: Int -> (Loc, Int) -> (Int, (Loc,Int))
+                  accum a (loc,b) | loc == Lcl = (a+1,(loc,b+a))
+                                  | loc == Param = (a,(loc,b))
+                  
+                  {-
+
+foldl op M.empty xs
+           where op :: Env -> Env -> Env
+                 op = -}
+                       
 temp :: [Env -> Env -> (Env,Code)] -> Env -> Env -> [(Env,Code)]
 temp xs env env2 = Prelude.foldr op [] xs
             where op a b = a env env2: b
