@@ -9,14 +9,7 @@ class Hello
         int c;
         b=4;
         c=5;
-        if(b==4){
-            int a;
-            a=6;
-            b=square(3);
-        }else{
-            int d;
-            d=8;
-        }
+        c*=2;
     }
     
     int square( int x)
