@@ -1,13 +1,16 @@
 class Hello
 {
-    int g;
-    int a;
-    
     void main()
     {
-        a = 3;
-        g = 0;
-        g = 8 - 3 + (a++);
+        int a;
+        int b;
+        b = 12;
+        int c;
+        c = 0;
+        for(a=1; a < b; a++){
+            c += a;
+        }
+        print(c);
     }
     
     int square( int x)

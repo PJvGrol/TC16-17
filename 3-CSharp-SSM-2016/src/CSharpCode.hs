@@ -21,7 +21,7 @@ codeAlgebra :: CSharpAlgebra (Env -> Code) (Env -> Env -> (Env,Code)) (Env -> En
 codeAlgebra =
     ( fClas
     , (fMembDecl, fMembMeth)
-    , (fStatDecl, fStatExpr, fStatIf, fStatWhile, fStatReturn, fPrint, fStatBlock)
+    , (fStatDecl, fStatExpr, fStatIf, fStatWhile, fStatFor, fStatReturn, fPrint, fStatBlock)
     , (fExprCon, fExprVar, fExprOp, fMethCall)
     )
 
@@ -48,6 +48,14 @@ fStatDecl (Decl t tk) env env2 = (M.insert tk (Lcl, nrOfLoc Lcl env + 1) env, []
                                  
 -- length env + 1 moet anders -> param op -2, -3 etc, locals op 1, 2, 3 etc.
                                  
+fStatFor :: (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env, Code)) -> Env -> Env -> (Env, Code)
+fStatFor e1 e2 e3 s1 env1 env2 = (combine [env1, env3], a ++ [BRA (k +m)] ++ d ++ c ++ b ++ [BRT (-(k + l + m + 2))] )
+                               where
+                               a = e1 env2 Address
+                               b = e2 env2 Value
+                               c = e3 env2 Address
+                               (env3, d) = s1 env1 env2
+                               (k, l, m) = (codeSize d, codeSize b, codeSize c)
                                  
 f :: Env -> Code
 f = undefined

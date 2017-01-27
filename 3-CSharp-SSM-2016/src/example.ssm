@@ -1,44 +1,47 @@
 	LDR SP
 	STR R5
-	AJS 2
+	AJS 0
 	Bsr main
 	HALT
 main:
-	LINK 0
-	LDC 3
-	LDR R5
-	LDAA 1
+	LINK 3
+	LDC 12
+	STL 2
 	LDC 0
-	LDR R5
-	LDAA 1
-	LDC 8
-	LDC 3
-	SUB
-	LDR R5
-	LDA 1
+	STL 3
+	LDC 1
+	STL 1
+	BRA 14
+	LDL 3
+	LDL 1
+	ADD
+	STL 3
+	LDL 1
 	LDC 1
 	ADD
-	LDR R5
-	LDAA 1
-	ADD
-	LDR R5
-	LDAA 1
+	STL 1
+	LDL 1
+	LDL 2
+	LT
+	BRT -21
+	LDL 3
+	TRAP 0
 	UNLINK
 	RET
 square:
 	LINK 0
-	LDL -4
-	LDL -4
+	LDL -2
+	LDL -2
 	MUL
 	STR R4
 	UNLINK
 	RET
 cube:
 	LINK 0
-	LDL -4
-	LDL -4
+	LDL -2
+	LDL -2
 	MUL
-	LDL -4
+	LDL -2
 	MUL
 	STR R4
 	UNLINK
