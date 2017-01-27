@@ -1,6 +1,5 @@
 module SSM where
 
-
 data Reg = PC | SP | MP | R3 | R4 | R5 | R6 | R7
    deriving Show
 
@@ -13,7 +12,6 @@ r4 = R4
 r5 = R5
 r6 = R6
 r7 = R7
-
 
 data Instr
     = STR Reg | STL Int  | STS Int  | STA Int        -- Store from stack
@@ -34,7 +32,6 @@ data Instr
     deriving Show
 
 type Code = [Instr]
-
 
 pop :: Instr
 pop = AJS (-1)

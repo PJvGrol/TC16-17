@@ -6,7 +6,6 @@ import Control.Monad
 import ParseLib.Abstract
 import Prelude hiding ((<*),(*>),(<$))
 
-
 data Token = POpen    | PClose      -- parentheses     ()
            | SOpen    | SClose      -- square brackets []
            | COpen    | CClose      -- curly braces    {}

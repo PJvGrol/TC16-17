@@ -5,7 +5,6 @@ import ParseLib.Abstract hiding (braced, bracketed, parenthesised)
 import CSharpLex
 import Prelude hiding ((<*),(*>),(<$))
 
-
 data Class = Class Token [Member]
     deriving Show
 
@@ -37,7 +36,6 @@ data Type = TypeVoid
           | TypeObj   Token
           | TypeArray Type
           deriving (Eq,Show)
-
 
 parenthesised p = pack (symbol POpen) p (symbol PClose)
 bracketed     p = pack (symbol SOpen) p (symbol SClose)

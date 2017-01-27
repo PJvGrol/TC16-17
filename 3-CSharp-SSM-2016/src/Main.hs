@@ -3,9 +3,7 @@ module Main where
 import Prelude hiding ((<$), (<*), (*>))
 import System.Environment
 import System.FilePath
-
 import ParseLib.Abstract.Derived
-
 import CSharpLex
 import CSharpGram
 import CSharpAlgebra
@@ -13,6 +11,9 @@ import SSM
 import CSharpCode
 import Prelude hiding ((<*))
 import qualified Data.Map as M
+
+-- Exercises made:
+-- Ex 1, 2, 3 4, 5, 6, 7, 8, 12
 
 start :: Parser s a -> [s] -> a
 start p = fst . head . filter (null . snd) . parse p
