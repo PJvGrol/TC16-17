@@ -52,13 +52,13 @@ pExprSimple =  ExprConst <$> sConst
            <|> ExprConst <$ symbol Apostrof <*> sChar <* symbol Apostrof
 
 pExpr :: Int -> Parser Token Expr
-pExpr n | n <= 7 = chainl (pExpr (n+1)) (ExprOper <$> (pOperator n))
+pExpr n | n <= 8 = chainl (pExpr (n+1)) (ExprOper <$> (pOperator n))
         | otherwise = pExprSimple
 
 pOperator :: Int -> Parser Token Token
 pOperator n = satisfy f
             where f (Operator x) = expPrior2 x >= n
-                  f x = False  
+                  f x = False
 
 expPrior2 :: String -> Int
 expPrior2  op | elem op["=", "+=", "-=", "*=", "/="] = 0

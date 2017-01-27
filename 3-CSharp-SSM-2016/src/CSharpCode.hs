@@ -110,10 +110,10 @@ fExprCon (LowerId c) env va = [LDC (ord (head c))]
 fExprVar :: Token -> Env -> ValueOrAddress -> Code
 fExprVar t env va = case va of
                         Value ->   case y of
-                                   Mem -> undefined
+                                   Mem -> [LDR R5] ++ [LDA z] 
                                    otherwise -> [LDL z]
                         Address -> case y of
-                                   Mem -> undefined
+                                   Mem -> [LDR R5] ++ [LDAA z]
                                    otherwise -> [STL z]
                     where
                     x = env M.! t
@@ -133,7 +133,7 @@ fExprOp (Operator "=") e1 e2 env va = e2 env Value ++ e1 env Address
 fExprOp (Operator op)  e1 e2 env va = e1 env Value ++ e2 env Value ++ [opCodes M.! op]
 -}
 fExprOp :: Token -> (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> Env -> ValueOrAddress -> Code
-fExprOp (Operator "=") e1 e2 env va = e2 env Value ++ e1 env Address -- x = 3
+fExprOp (Operator "=") e1 e2 env va = e2 env Value ++ e1 env Address
 fExprOp (Operator "+=") e1 e2 env va = e1 env Value ++ e2 env Value ++ [ADD] ++ e1 env Address
 fExprOp (Operator "-=") e1 e2 env va = e1 env Value ++ e2 env Value ++ [SUB] ++ e1 env Address
 fExprOp (Operator "*=") e1 e2 env va = e1 env Value ++ e2 env Value ++ [MUL] ++ e1 env Address

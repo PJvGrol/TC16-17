@@ -5,16 +5,17 @@ class Hello
     
     void main()
     {
-        bool b;
+        //a=3;
+        int b;
         int c;
         b=4;
         c=5;
+        //c++;
     }
     
     int square( int x)
     {
-        int b;
-        b=x*x;
+        return x*x;
     }
     int cube( int x)
     {
