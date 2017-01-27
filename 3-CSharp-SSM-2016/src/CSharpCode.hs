@@ -12,7 +12,7 @@ import Data.Char
 data ValueOrAddress = Value | Address
     deriving Show
 
-type Env = M.Map Token (Loc, Int)--[(Token,(Loc,Int))]
+type Env = M.Map Token (Loc, Int)
 
 data Loc = Mem | Lcl | Param
         deriving Eq
@@ -41,8 +41,7 @@ fMembMeth t (LowerId x) ps s menv menv2 = (menv, [LABEL x, LINK (length env2 - l
 
 fStatDecl :: Decl -> Env -> Env -> (Env,Code)
 fStatDecl (Decl t tk) env env2 = (M.insert tk (Lcl, nrOfLoc Lcl env + 1) env, [])--((tk,(Lcl,length env + 1)):env)
-                                 
-                                 
+
 fStatFor :: (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env, Code)) -> Env -> Env -> (Env, Code)
 fStatFor e1 e2 e3 s1 env1 env2 = (combine [env1, env3], a ++ [BRA (k +m)] ++ d ++ c ++ b ++ [BRT (-(k + l + m + 2))] )
                                where
@@ -51,13 +50,14 @@ fStatFor e1 e2 e3 s1 env1 env2 = (combine [env1, env3], a ++ [BRA (k +m)] ++ d +
                                c = e3 env2 Address
                                (env3, d) = s1 env1 env2
                                (k, l, m) = (codeSize d, codeSize b, codeSize c)
-                                 
+
 fStatExpr :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
 fStatExpr exp env env2 = (env, exp env2 Value)
-                   
+
+-- Checks the amount of variables saved to a certain location (Member variables, parameters or local variables)
 nrOfLoc :: Loc -> Env -> Int
 nrOfLoc loc env = M.size (fst (M.partition (\(x,y)-> x == loc) env))
-                            
+
 fStatIf :: (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env,Code)) -> (Env -> Env -> (Env,Code)) -> Env -> Env -> (Env,Code)
 fStatIf e s1 s2 env env2 = (combine [env,env3,env4], c ++ [BRF (n1 + 2)] ++ d ++ [BRA n2] ++ d2)
     where
@@ -105,13 +105,16 @@ temp :: [Env -> Env -> (Env,Code)] -> Env -> Env -> [(Env,Code)]
 temp xs env env2 = Prelude.foldr op [] xs
             where op a b = a env env2: b
 
+-- True is saved as 1, False as 0. Char saved as ASCII value, int saved as itself.
 fExprCon :: Token -> Env -> ValueOrAddress -> Code
 fExprCon (ConstInt n) env va = [LDC n]
 fExprCon (KeyTrue) env va = [LDC 1]
 fExprCon (KeyFalse) env va = [LDC 0]
-fExprCon (UpperId c) env va = [LDC (ord (head c))]
-fExprCon (LowerId c) env va = [LDC (ord (head c))]
+fExprCon (UpperCh c) env va = [LDC (ord c)]
+fExprCon (LowerCh c) env va = [LDC (ord c)]
 
+-- Since Member variables are loaded from the stack, we have to use separate commands for those
+-- Parameters and local variables are loaded based on the MP, so those commands are the same
 fExprVar :: Token -> Env -> ValueOrAddress -> Code
 fExprVar t env va = case va of
                         Value ->   case y of
@@ -121,10 +124,14 @@ fExprVar t env va = case va of
                                    Mem -> [LDR R5, STA z]
                                    otherwise -> [STL z]
                     where
+                    -- x = the (loc, int) from the gives token (variable)
                     x = env M.! t
+                    -- y = loc of variable, z = int of variable (offset to MP/Address)
                     y = fst x
                     z = snd x
-                    
+
+-- Value and Address already push/pop what's needed, so no ssm commands have to be added here for that
+-- +=,-=,*=,/= simply load the variable, then the constant, do the appropriate operation, and then save the value
 fExprOp :: Token -> (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> Env -> ValueOrAddress -> Code
 fExprOp (Operator "=") e1 e2 env va = e2 env Value ++ e1 env Address
 fExprOp (Operator "+=") e1 e2 env va = e1 env Value ++ e2 env Value ++ [ADD] ++ e1 env Address
@@ -134,7 +141,7 @@ fExprOp (Operator "/=") e1 e2 env va = e1 env Value ++ e2 env Value ++ [DIV] ++ 
 fExprOp (Operator op)  e1 e2 env va = e1 env Value ++ e2 env Value ++ [opCodes M.! op]
 
 fMethCall :: Token -> [Env -> ValueOrAddress -> Code] -> Env -> ValueOrAddress -> Code
-fMethCall (LowerId x) xs env va = Prelude.foldr op [Bsr x, AJS (-(length xs)), LDR R4] xs --[LDL 10, Bsr x]
+fMethCall (LowerId x) xs env va = Prelude.foldr op [Bsr x, AJS (-(length xs)), LDR R4] xs
                                 where op f c = f env Value ++ c
 
                                 

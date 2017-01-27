@@ -12,20 +12,19 @@ data Token = POpen    | PClose      -- parentheses     ()
            | COpen    | CClose      -- curly braces    {}
            | Comma    | Semicolon
            | KeyIf    | KeyElse   
-           | KeyFor   | KeyPrint
+           | KeyFor   | KeyPrint    -- Keyword "for" and "print"
            | KeyWhile | KeyReturn 
            | KeyTry   | KeyCatch
            | KeyClass | KeyVoid
-           | KeyTrue  | KeyFalse
-           | SComment | MComment
+           | KeyTrue  | KeyFalse    -- Keywords "true", "false"
+           | SComment | MComment    -- Singleline Comment or Multipleline Comment
            | StdType   String       -- the 8 standard types
            | Operator  String       -- the 15 operators
            | UpperId   String       -- uppercase identifiers
            | LowerId   String       -- lowercase identifiers
-           | UpperCh   Char
-           | LowerCh   Char
+           | UpperCh   Char         -- uppercase character
+           | LowerCh   Char         -- lowercase character
            | ConstInt  Int
-           | Apostrof
            deriving (Eq, Show, Ord)
 
 keyword :: String -> Parser Char String
@@ -35,11 +34,10 @@ keyword xs@(x:_) | isLetter x = do ys <- greedy (satisfy isAlphaNum)
                                    return ys
                  | otherwise  = token xs
 
-
 greedyChoice :: [Parser s a] -> Parser s a
 greedyChoice = foldr (<<|>) empty
 
-
+-- Added "print", "for", "true", "false" to terminals
 terminals :: [(Token, String)]
 terminals =
     [ ( POpen     , "("      )
@@ -48,7 +46,6 @@ terminals =
     , ( SClose    , "]"      )
     , ( COpen     , "{"      )
     , ( CClose    , "}"      )
-    , ( Apostrof  , "\'"     )
     , ( Comma     , ","      )
     , ( Semicolon , ";"      )
     , ( KeyIf     , "if"     )
@@ -65,6 +62,7 @@ terminals =
     , ( KeyFalse  , "false"  )
     ]
 
+-- Since we throw away CSharp comment, we consider it whitespace
 lexWhiteSpace :: Parser Char ()
 lexWhiteSpace = () <$ greedy ((() <$ satisfy isSpace) <|> lexSingleComment <|> lexMultipleComment)
 
@@ -74,11 +72,13 @@ lexLowerId = (\x xs -> LowerId (x:xs)) <$> satisfy isLower <*> greedy (satisfy i
 lexUpperId :: Parser Char Token
 lexUpperId = (\x xs -> UpperId (x:xs)) <$> satisfy isUpper <*> greedy (satisfy isAlphaNum)
 
+-- Lex lowercase character, also parsing the ' and throwing those away
 lexLowerCh :: Parser Char Token
-lexLowerCh = LowerCh <$> satisfy isLower
+lexLowerCh = LowerCh <$ token "\'" <*> satisfy isLower <* token "\'"
 
+-- Lex uppercase character, also parsing the ' and throwing those away
 lexUpperCh :: Parser Char Token
-lexUpperCh = UpperCh <$> satisfy isUpper
+lexUpperCh = UpperCh <$ token "\'" <*> satisfy isUpper <* token "\'"
 
 lexConstInt :: Parser Char Token
 lexConstInt = (ConstInt . read) <$> greedy1 (satisfy isDigit)
@@ -89,21 +89,26 @@ lexEnum f xs = f <$> greedyChoice (map keyword xs)
 lexTerminal :: Parser Char Token
 lexTerminal = choice [t <$ keyword s | (t,s) <- terminals]
 
+-- Check for the // that signifies singleline comment, then parse to end of line
 lexSingleComment :: Parser Char ()
 lexSingleComment = () <$ token "//" <* greedy(satisfy (/= '\n'))
 
+-- Check for the /* that signifies multiline comment, then parse to end of multiline comment
 lexMultipleComment :: Parser Char ()
 lexMultipleComment = () <$ token "/*" <* lexToEndMC
 
+-- Check whether the token is */, if not parse a symbol and try again
 lexToEndMC :: Parser Char String
 lexToEndMC = token "*/" <<|> (:) <$> anySymbol <*> lexToEndMC
 
 stdTypes :: [String]
 stdTypes = ["int", "long", "double", "float", "byte", "short", "bool", "char"]
 
+-- Added ++, --, +=, -=, /=, *= to list of operators. They have to be in front to have ++ picked over +
 operators :: [String]
 operators = ["++", "--", "+=", "-=", "*=", "/=", "+", "-", "*", "/", "%", "&&", "||", "^", "<=", "<", ">=", ">", "==", "!=", "="]
 
+-- Added lexLowerCh and lexUpperCh
 lexToken :: Parser Char Token
 lexToken = greedyChoice
              [ lexTerminal
@@ -154,16 +159,18 @@ sOperator = satisfy isOperator
     where isOperator (Operator _) = True
           isOperator _            = False
 
+-- Check whether it is a bool
 sBool :: Parser Token Token
 sBool = satisfy isBool
       where isBool (KeyFalse) = True
             isBool (KeyTrue)  = True
             isBool _          = False
-            
+
+-- Check whether it is a char    
 sChar :: Parser Token Token
 sChar = satisfy isChar
-      where isChar (LowerId _) = True
-            isChar (UpperId _) = True
+      where isChar (LowerCh _) = True
+            isChar (UpperCh _) = True
             isChar _           = False
 
 sSemi :: Parser Token Token

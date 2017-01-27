@@ -17,9 +17,9 @@ data Stat = StatDecl   Decl
           | StatExpr   Expr
           | StatIf     Expr Stat Stat
           | StatWhile  Expr Stat
-          | StatFor    Expr Expr Expr Stat
+          | StatFor    Expr Expr Expr Stat -- for ( expr ; expr ; expr ) body;
           | StatReturn Expr
-          | StatPrint  Expr
+          | StatPrint  Expr                -- print ( expr );
           | StatBlock  [Stat]
           deriving Show
 
@@ -48,25 +48,21 @@ pExprSimple =  ExprConst <$> sConst
            <|> ExprVar   <$> sLowerId
            <|> parenthesised (pExpr 0)
            <|> pMethCall
-           <|> (\x _ -> ExprOper (Operator "+=") x (ExprConst (ConstInt 1))) <$> (ExprVar <$> sLowerId) <*> (symbol (Operator "++"))
-           <|> (\x _ -> ExprOper (Operator "-=") x (ExprConst (ConstInt 1))) <$> (ExprVar <$> sLowerId) <*> (symbol (Operator "--"))
+           <|> (\x _ -> ExprOper (Operator "+=") x (ExprConst (ConstInt 1))) <$> (ExprVar <$> sLowerId) <*> (symbol (Operator "++")) -- Transform ++ to +=1
+           <|> (\x _ -> ExprOper (Operator "-=") x (ExprConst (ConstInt 1))) <$> (ExprVar <$> sLowerId) <*> (symbol (Operator "--")) -- Transfrom -- to -=1
            <|> ExprConst <$> sBool
-           <|> ExprConst <$ symbol Apostrof <*> sChar <* symbol Apostrof
+           <|> ExprConst <$> sChar
            
 pExpr :: Int -> Parser Token Expr
 pExpr n | n <= 7 = chainl (pExpr (n+1)) (ExprOper <$> (pOperator n))
         | otherwise = pExprSimple
 
 pOperator :: Int -> Parser Token Token
-pOperator n = change <$> satisfy f
+pOperator n = satisfy f
             where f (Operator x) = expPrior2 x >= n
                   f x = False
 
-change :: Token -> Token
-change (Operator "++") = Operator "+="
-change (Operator "--") = Operator "-="
-change x = x
-                  
+-- The priorities of the various operators
 expPrior2 :: String -> Int
 expPrior2  op | elem op["=", "+=", "-=", "*=", "/="] = 0
               | op == "||" = 1
@@ -86,6 +82,7 @@ pStatDecl :: Parser Token Stat
 pStatDecl =  pStat
          <|> StatDecl <$> pDeclSemi
 
+-- StatFor can't be parsed with parenthesised, so we check for ( ; ; ) seperately
 pStat :: Parser Token Stat
 pStat =  StatExpr <$> (pExpr 0) <*  sSemi
      <|> StatIf     <$ symbol KeyIf     <*> parenthesised (pExpr 0) <*> pStat <*> optionalElse
