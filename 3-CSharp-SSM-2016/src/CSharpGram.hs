@@ -17,7 +17,7 @@ data Stat = StatDecl   Decl
           | StatExpr   Expr
           | StatIf     Expr Stat Stat
           | StatWhile  Expr Stat
-          | StatFor    Stat Stat
+          | StatFor    Expr Expr Expr Stat
           | StatReturn Expr
           | StatPrint  Expr
           | StatBlock  [Stat]
@@ -90,7 +90,7 @@ pStat :: Parser Token Stat
 pStat =  StatExpr <$> (pExpr 0) <*  sSemi
      <|> StatIf     <$ symbol KeyIf     <*> parenthesised (pExpr 0) <*> pStat <*> optionalElse
      <|> StatWhile  <$ symbol KeyWhile  <*> parenthesised (pExpr 0) <*> pStat
-     <|> StatFor    <$ symbol KeyFor    <*> parenthesised (pStat)   <*> pStat
+     <|> StatFor    <$ symbol KeyFor    <* (symbol POpen) <*> (pExpr 0) <*> (pExpr 0) <*> (pExpr 0) <* (symbol PClose) <*> pStat
      <|> StatReturn <$ symbol KeyReturn <*> (pExpr 0)               <*  sSemi
      <|> StatPrint  <$ symbol KeyPrint  <*> parenthesised (pExpr 0) <*  sSemi
      <|> pBlock
