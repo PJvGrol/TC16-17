@@ -13,7 +13,16 @@ import Prelude hiding ((<*))
 import qualified Data.Map as M
 
 -- Exercises made:
--- Ex 1, 2, 3 4, 5, 6, 7, 8, 12
+-- Ex 1: CSharpCode, CSharpGram, CSharpLex
+-- Ex 2: CSharpGram
+-- Ex 3: CSharpCode, CSharpGram
+-- Ex 4: CSharpAlgebra, CSharpCode, CSharpGram, CSharpLex
+-- Ex 5: CSharpAlgebra, CSharpCode, CSharpGram, CSharpLex
+-- Ex 6: CSharpCode
+-- Ex 7: CSharpLex
+-- Ex 8: CSharpCode, CSharpGram, CSharpLex
+-- Ex 9: CSharpAlgebra, CSharpCode, CSharpGram, CSharpLex
+-- Ex 12: CSharpCode
 
 start :: Parser s a -> [s] -> a
 start p = fst . head . filter (null . snd) . parse p
