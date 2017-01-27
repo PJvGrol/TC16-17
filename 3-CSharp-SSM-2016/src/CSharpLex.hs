@@ -84,7 +84,7 @@ lexConstInt :: Parser Char Token
 lexConstInt = (ConstInt . read) <$> greedy1 (satisfy isDigit)
 
 lexEnum :: (String -> Token) -> [String] -> Parser Char Token
-lexEnum f xs = f <$> choice (map keyword xs)
+lexEnum f xs = f <$> greedyChoice (map keyword xs)
 
 lexTerminal :: Parser Char Token
 lexTerminal = choice [t <$ keyword s | (t,s) <- terminals]
@@ -102,7 +102,7 @@ stdTypes :: [String]
 stdTypes = ["int", "long", "double", "float", "byte", "short", "bool", "char"]
 
 operators :: [String]
-operators = ["+", "-", "*", "/", "%", "&&", "||", "^", "<=", "<", ">=", ">", "==", "!=", "=", "++", "--", "+=", "-=", "*=", "/="]
+operators = ["++", "--", "+=", "-=", "*=", "/=", "+", "-", "*", "/", "%", "&&", "||", "^", "<=", "<", ">=", ">", "==", "!=", "="]
 
 lexToken :: Parser Char Token
 lexToken = greedyChoice
