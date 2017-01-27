@@ -1,25 +1,15 @@
 	Bsr main
 	HALT
 main:
-	LINK 4
+	LINK 2
 	LDC 4
-	STL 2
-	LDC 5
-	STL 3
-	LDL 2
-	LDC 4
-	EQ
-	BRF 16
-	LDC 6
 	STL 1
+	LDC 5
+	STL 2
 	LDC 3
 	Bsr square
 	AJS -1
 	LDR R4
-	STL 2
-	BRA 4
-	LDC 8
-	STL 5
 	UNLINK
 	RET
 square:
@@ -28,8 +18,6 @@ square:
 	LDL -2
 	MUL
 	STL 1
-	LDL 1
-	STR R4
 	UNLINK
 	RET
 cube:

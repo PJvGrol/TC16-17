@@ -81,11 +81,15 @@ fStatBlock xs env env2 = (combine(map fst ys), concat(map snd ys))
                        where ys = temp xs env env2
 
 combine :: [Env] -> Env
-combine xs = snd ( M.mapAccum accum 0 (M.unions xs))
-            where accum :: Int -> (Loc, Int) -> (Int, (Loc,Int))
-                  accum a (loc,b) | loc == Lcl = (a+1,(loc,b+a))
-                                  | loc == Param = (a,(loc,b))
-                  
+combine [env] = env
+combine (env:env2:xs) = combine ((M.union env env3): xs)
+                    where env3 = snd (M.mapAccum accum add env2)
+                          add = nrOfLoc Lcl env
+                          accum :: Int -> (Loc, Int) -> (Int, (Loc,Int))
+                          accum a (loc,b) | loc == Lcl = (a,(loc,b+a))
+                                          | loc == Param = (a-1,(loc,b))
+
+                  --combine xs = snd ( M.mapAccum accum 0 (M.unions xs))                  
                   {-
 
 foldl op M.empty xs
