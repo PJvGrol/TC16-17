@@ -12,12 +12,18 @@ import Data.Char
 data ValueOrAddress = Value | Address
     deriving Show
 
-type Env = M.Map Token (Loc, Int)--[(Token,(Loc,Int))]
+-- The environment is a Map from Token to a tuple (a,b) where a is the location of the variable (local, global, parameter)
+-- and b is the offset relative to the markpointer (local, parameter) or the address in R5
+type Env = M.Map Token (Loc, Int)
 
 data Loc = Mem | Lcl | Param
         deriving Eq
-    
-codeAlgebra :: CSharpAlgebra (Env -> Code) (Env -> Env -> (Env,Code)) (Env -> Env -> (Env, Code)) (Env -> ValueOrAddress -> Code)
+
+-- A function that calculates the number of variables in an environment at a certain location
+nrOfLoc :: Loc -> Env -> Int
+nrOfLoc loc env = M.size (fst (M.partition (\(x,y)-> x == loc) env))
+        
+codeAlgebra :: CSharpAlgebra Code (Env -> Env -> (Env,Code)) (Env -> Env -> (Env, Code)) (Env -> ValueOrAddress -> Code)
 codeAlgebra =
     ( fClas
     , (fMembDecl, fMembMeth)
@@ -25,39 +31,46 @@ codeAlgebra =
     , (fExprCon, fExprVar, fExprOp, fMethCall)
     )
 
-fClas :: Token -> [Env -> Env -> (Env,Code)] -> Env -> Code
-fClas c ms menv = [LDR SP, STR R5, AJS (nrOfLoc Mem menv2), Bsr "main", HALT] ++ (concat.map snd) (f ms menv menv2)
+--     
+fClas :: Token -> [Env -> Env -> (Env,Code)] -> Code
+fClas c ms = [LDR SP, STR R5, AJS (nrOfLoc Mem menv2), Bsr "main", HALT] ++ (concat.map snd) (f ms M.empty menv2)
                       where f xs p1 p2 = map (\x -> x p1 p2) xs
-                            menv2 = (combineMem.fst) (unzip (f ms menv menv2))
+                            menv2 = (combineMem.fst.unzip) (f ms M.empty M.empty)
 
+-- We add the global variable to the global environment
 fMembDecl :: Decl -> Env -> Env -> (Env,Code)
 fMembDecl (Decl t tk) menv menv2 = (M.insert tk (Mem, M.size menv + 1) menv,[])
 
+-- Because no global variables are declared, we just return the old global environment menv
+-- The LINK gets the number of local variables (total - parameters - global)
+-- Before giving the environment on, we add the parameters to the environment
 fMembMeth :: Type -> Token -> [Decl] -> (Env -> Env -> (Env, Code)) -> Env -> Env -> (Env,Code)
 fMembMeth t (LowerId x) ps s menv menv2 = (menv, [LABEL x, LINK (length env2 - length ps - nrOfLoc Mem env2)] ++ snd(s env env2) ++ [UNLINK, RET])
-                             where env = foldr op2 menv2 ps
-                                   op2 (Decl tp tk) mp = M.insert tk (Param,(-1)*(M.size mp)-2) mp
-                                   (env2,code) = s env env2
+                             where env                       = foldr addParams menv2 ps
+                                   addParams (Decl tp tk) mp = M.insert tk (Param,(-1)*(nrOfLoc Param mp)-2) mp
+                                   (env2,code)               = s env env2
 
+-- We add the variabel to the environment, of course there is no code generated here
 fStatDecl :: Decl -> Env -> Env -> (Env,Code)
-fStatDecl (Decl t tk) env env2 = (M.insert tk (Lcl, nrOfLoc Lcl env + 1) env, [])--((tk,(Lcl,length env + 1)):env)
+fStatDecl (Decl t tk) env env2 = (M.insert tk (Lcl, nrOfLoc Lcl env + 1) env, [])
                                  
-                                 
+-- Works the same as fStatWhile, but first we jump over the body and the increment (or any other operation)
+-- and we added the code for the increment operation after body of course.
+-- We add the environment from the body to the old environment 
 fStatFor :: (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env, Code)) -> Env -> Env -> (Env, Code)
-fStatFor e1 e2 e3 s1 env1 env2 = (combine [env1, env3], a ++ [BRA (k +m)] ++ d ++ c ++ b ++ [BRT (-(k + l + m + 2))] )
+fStatFor e1 e2 e3 s1 env1 env2 = (combine [env1, env3], asm ++ [BRA (szbody + szinc)] ++ body ++ inc ++ cond ++ [BRT (-(szbody + szcond + szinc + 2))] )
                                where
-                               a = e1 env2 Address
-                               b = e2 env2 Value
-                               c = e3 env2 Address
-                               (env3, d) = s1 env1 env2
-                               (k, l, m) = (codeSize d, codeSize b, codeSize c)
-                                 
+                               asm = e1 env2 Address
+                               cond = e2 env2 Value
+                               inc = e3 env2 Address
+                               (env3, body) = s1 env1 env2
+                               (szbody, szcond, szinc) = (codeSize body, codeSize cond, codeSize inc)
+
+-- Here we gene                               
 fStatExpr :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
 fStatExpr exp env env2 = (env, exp env2 Value)
-                   
-nrOfLoc :: Loc -> Env -> Int
-nrOfLoc loc env = M.size (fst (M.partition (\(x,y)-> x == loc) env))
-                            
+ 
+-- We add the both the environments to the old environment 
 fStatIf :: (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env,Code)) -> (Env -> Env -> (Env,Code)) -> Env -> Env -> (Env,Code)
 fStatIf e s1 s2 env env2 = (combine [env,env3,env4], c ++ [BRF (n1 + 2)] ++ d ++ [BRA n2] ++ d2)
     where
@@ -66,6 +79,7 @@ fStatIf e s1 s2 env env2 = (combine [env,env3,env4], c ++ [BRF (n1 + 2)] ++ d ++
         (env3,d)  = s1 env env2
         (env4,d2) = s2 env env2
 
+-- Just like in the For we add the environment from the body to the old environment        
 fStatWhile :: (Env -> ValueOrAddress -> Code) -> (Env -> Env -> (Env,Code)) -> Env -> Env -> (Env,Code)
 fStatWhile e s1 env env2 = (combine [env,env3], [BRA n] ++ d ++ c ++ [BRT (-(n + k + 2))])
     where
@@ -73,6 +87,7 @@ fStatWhile e s1 env env2 = (combine [env,env3], [BRA n] ++ d ++ c ++ [BRT (-(n +
         (n, k)   = (codeSize d, codeSize c)
         (env3,d) = s1 env env2
 
+-- We store the value in a Register
 fStatReturn :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
 fStatReturn e env env2 = (env, e env2 Value ++ [STR R4])
 

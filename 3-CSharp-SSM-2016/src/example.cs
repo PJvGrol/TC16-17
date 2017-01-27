@@ -1,16 +1,11 @@
 class Hello
 {
+    
+    int z;
+    int y;
     void main()
     {
-        int a;
-        int b;
-        b = 12;
-        int c;
-        c = 0;
-        for(a=1; a < b; a++){
-            c += a;
-        }
-        print(c);
+        z = square(3);
     }
     
     int square( int x)

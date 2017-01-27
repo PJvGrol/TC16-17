@@ -8,7 +8,7 @@ type CSharpAlgebra clas memb stat expr
     = (  Token -> [memb] -> clas
 
       ,  ( Decl                             -> memb
-         , Type -> Token -> [Decl] -> stat  -> memb -- Method
+         , Type -> Token -> [Decl] -> stat  -> memb
          )
 
       ,  ( Decl                  -> stat
