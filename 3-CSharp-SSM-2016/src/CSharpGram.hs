@@ -50,11 +50,13 @@ pExprSimple =  ExprConst <$> sConst
            <|> (\x _ -> ExprOper (Operator "-=") x (ExprConst (ConstInt 1))) <$> (ExprVar <$> sLowerId) <*> (symbol (Operator "--")) -- Transfrom -- to -=1
            <|> ExprConst <$> sBool
            <|> ExprConst <$> sChar
-           
+
+-- Parser starts parsing with the lowest priority           
 pExpr :: Int -> Parser Token Expr
 pExpr n | n <= 7 = chainl (pExpr (n+1)) (ExprOper <$> (pOperator n))
         | otherwise = pExprSimple
 
+-- Parser that only parses operators with priority greater than or equal to n
 pOperator :: Int -> Parser Token Token
 pOperator n = satisfy f
             where f (Operator x) = expPrior2 x >= n
@@ -80,7 +82,7 @@ pStatDecl :: Parser Token Stat
 pStatDecl =  pStat
          <|> StatDecl <$> pDeclSemi
 
--- StatFor can't be parsed with parenthesised, so we check for ( ; ; ) seperately
+-- StatFor can't be parsed with parenthesised, so we check for ( ; ; ) separately
 pStat :: Parser Token Stat
 pStat =  StatExpr <$> (pExpr 0) <*  sSemi
      <|> StatIf     <$ symbol KeyIf     <*> parenthesised (pExpr 0) <*> pStat <*> optionalElse
@@ -94,6 +96,7 @@ pStat =  StatExpr <$> (pExpr 0) <*  sSemi
 pBlock :: Parser Token Stat
 pBlock = StatBlock <$> braced (many pStatDecl)
 
+-- Self explanatory
 pMethCall :: Parser Token Expr
 pMethCall = ExprMeth <$> sLowerId <*> parenthesised pArguments
           where pArguments = option (listOf (pExpr 1) (symbol Comma)) []
