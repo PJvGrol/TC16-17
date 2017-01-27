@@ -28,32 +28,22 @@ codeAlgebra =
 fClas :: Token -> [Env -> Env -> (Env,Code)] -> Env -> Code
 fClas c ms menv = [LDR SP, STR R5, AJS (nrOfLoc Mem menv2), Bsr "main", HALT] ++ (concat.map snd) (f ms menv menv2)
                       where f xs p1 p2 = map (\x -> x p1 p2) xs
-                            --(envs, codes) = unzip (f ms menv menv2)
-                            --menv2 = combine envs
                             menv2 = (combineMem.fst) (unzip (f ms menv menv2))
-                            --menv2 = combineMem (map fst (f ms menv menv2))
 
 fMembDecl :: Decl -> Env -> Env -> (Env,Code)
 fMembDecl (Decl t tk) menv menv2 = (M.insert tk (Mem, M.size menv + 1) menv,[])
 
 fMembMeth :: Type -> Token -> [Decl] -> (Env -> Env -> (Env, Code)) -> Env -> Env -> (Env,Code)
 fMembMeth t (LowerId x) ps s menv menv2 = (menv, [LABEL x, LINK (length env2 - length ps - nrOfLoc Mem env2)] ++ snd(s env env2) ++ [UNLINK, RET])
-                             where {-f ps = Prelude.foldr op [] ps
-                                   op (Decl tp tk) xs = fExprCon (ConstInt 3) env Value ++ xs-}
-                                   env = foldr op2 menv2 ps
+                             where env = foldr op2 menv2 ps
                                    op2 (Decl tp tk) mp = M.insert tk (Param,(-1)*(M.size mp)-2) mp
                                    (env2,code) = s env env2
 
 fStatDecl :: Decl -> Env -> Env -> (Env,Code)
 fStatDecl (Decl t tk) env env2 = (M.insert tk (Lcl, nrOfLoc Lcl env + 1) env, [])--((tk,(Lcl,length env + 1)):env)
                                  
--- length env + 1 moet anders -> param op -2, -3 etc, locals op 1, 2, 3 etc.
                                  
                                  
-f :: Env -> Code
-f = undefined
-
-
 fStatExpr :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
 fStatExpr exp env env2 = (env, exp env2 Value)
                    
@@ -102,12 +92,6 @@ combineMem (env:env2:xs) = combineMem ((M.union env env3): xs)
                             accum :: Int -> (Loc, Int) -> (Int, (Loc,Int))
                             accum a (loc,b) | loc == Mem = (a,(loc,b+a))
                                             | otherwise = (a,(loc,b+10))
-                  --combine xs = snd ( M.mapAccum accum 0 (M.unions xs))                  
-                  {-
-
-foldl op M.empty xs
-           where op :: Env -> Env -> Env
-                 op = -}
                        
 temp :: [Env -> Env -> (Env,Code)] -> Env -> Env -> [(Env,Code)]
 temp xs env env2 = Prelude.foldr op [] xs
@@ -131,20 +115,8 @@ fExprVar t env va = case va of
                     where
                     x = env M.! t
                     y = fst x
-                    z = snd x                    -- env M.! t = loc,int                 --[LABEL (show t), LABEL ((show . M.size) env)]--
-                                    
-
-{-let loc = 37 in case va of
-                                              Value    ->  [LDL  loc]
-                                              Address  ->  [LDLA loc]-}
-{-fExprVar t@(LowerId x) env va = undefined let loc = fromJust (lookup t env) in case va of
-                                                           Value    ->  (,[LDL  loc])
-                                                           Address  ->  (,[LDLA loc]) -}
-
-{-fExprOp :: Token -> (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> Env -> ValueOrAddress -> Code
-fExprOp (Operator "=") e1 e2 env va = e2 env Value ++ e1 env Address
-fExprOp (Operator op)  e1 e2 env va = e1 env Value ++ e2 env Value ++ [opCodes M.! op]
--}
+                    z = snd x
+                    
 fExprOp :: Token -> (Env -> ValueOrAddress -> Code) -> (Env -> ValueOrAddress -> Code) -> Env -> ValueOrAddress -> Code
 fExprOp (Operator "=") e1 e2 env va = e2 env Value ++ e1 env Address
 fExprOp (Operator "+=") e1 e2 env va = e1 env Value ++ e2 env Value ++ [ADD] ++ e1 env Address
