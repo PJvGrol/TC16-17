@@ -6,10 +6,6 @@ main:
 	STL 1
 	LDC 5
 	STL 2
-	LDL 2
-	LDC 2
-	MUL
-	STL 2
 	UNLINK
 	RET
 square:
@@ -18,8 +14,6 @@ square:
 	LDL -2
 	MUL
 	STL 1
-	LDL 1
-	STR R4
 	UNLINK
 	RET
 cube:
