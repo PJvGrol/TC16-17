@@ -6,6 +6,7 @@ class Hello
     int d;
     void main()
     {
+<<<<<<< HEAD
         //a=3;
         char g;
         g='asd';
@@ -17,6 +18,11 @@ class Hello
         //c++;
         c=5;
         //b = 8 + (c--);
+=======
+        a = 3;
+        g = 0;
+        g = 8 - 3 + (a++);
+>>>>>>> origin/master
     }
     
     int square( int x)

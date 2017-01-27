@@ -4,6 +4,7 @@
 	Bsr main
 	HALT
 main:
+<<<<<<< HEAD
 	LINK 1
 	LDC 97
 	STL 1
@@ -26,12 +27,38 @@ main:
 	LDC 5
 	LDR R5
 	STA 3
+=======
+	LINK 0
+	LDC 3
+	LDR R5
+	LDAA 1
+	LDC 0
+	LDR R5
+	LDAA 1
+	LDC 8
+	LDC 3
+	SUB
+	LDR R5
+	LDA 1
+	LDC 1
+	ADD
+	LDR R5
+	LDAA 1
+	ADD
+	LDR R5
+	LDAA 1
+>>>>>>> origin/master
 	UNLINK
 	RET
 square:
 	LINK 0
+<<<<<<< HEAD
 	LDL -6
 	LDL -6
+=======
+	LDL -4
+	LDL -4
+>>>>>>> origin/master
 	MUL
 	STR R4
 	UNLINK
