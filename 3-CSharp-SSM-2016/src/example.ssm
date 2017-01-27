@@ -13,24 +13,19 @@ main:
 	TRAP 0
 	LDC 5
 	LDR R5
-	LDC 1
-	ADD
 	STA 1
 	LDC 4
 	LDR R5
-	LDC 2
-	ADD
 	STA 2
 	LDC 6
 	LDR R5
-	LDC 3
-	ADD
 	STA 3
 	LDC 7
 	LDR R5
-	LDC 4
-	ADD
 	STA 4
+	LDC 5
+	LDR R5
+	STA 3
 	UNLINK
 	RET
 square:

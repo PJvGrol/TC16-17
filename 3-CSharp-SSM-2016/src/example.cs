@@ -15,6 +15,8 @@ class Hello
         c=6;
         d=7;
         //c++;
+        c=5;
+        //b = 8 + (c--);
     }
     
     int square( int x)
