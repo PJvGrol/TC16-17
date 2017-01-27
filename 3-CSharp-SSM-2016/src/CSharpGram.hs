@@ -96,7 +96,7 @@ pBlock = StatBlock <$> braced (many pStatDecl)
 
 pMethCall :: Parser Token Expr
 pMethCall = ExprMeth <$> sLowerId <*> parenthesised pArguments
-          where pArguments = listOf (pExpr 1) (symbol Comma)
+          where pArguments = option (listOf (pExpr 1) (symbol Comma)) []
 
 pMeth :: Parser Token Member
 pMeth = MemberM <$> methRetType <*> sLowerId <*> methArgList <*> pBlock

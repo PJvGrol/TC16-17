@@ -1,26 +1,19 @@
 class Hello
 {
-    void main()
-    {
-        int a;
-        int b;
-        b = 12;
-        int c;
-        c = 0;
-        c = square(3);
-        for(a=1; a < b; a++){
-            c += a;
-        }
-        print(c);
-    }
-    
-    int square( int x)
-    {
-        return x*x;
-    }
-    int cube( int x)
-    {
-        return x*x*x;
-    }
-
+	void main()
+	{
+		print(fac(10));
+	}
+	
+	int fac(int x)
+	{
+		if (x == 1)
+		{
+			return 1;
+		}
+		else
+		{
+			return x * fac(x - 1);
+		}
+	}
 }

@@ -4,49 +4,30 @@
 	Bsr main
 	HALT
 main:
-	LINK 3
-	LDC 12
-	STL 2
-	LDC 0
-	STL 3
-	LDC 3
-	Bsr square
+	LINK 0
+	LDC 10
+	Bsr fac
 	AJS -1
 	LDR R4
-	STL 3
-	LDC 1
-	STL 1
-	BRA 14
-	LDL 3
-	LDL 1
-	ADD
-	STL 3
-	LDL 1
-	LDC 1
-	ADD
-	STL 1
-	LDL 1
-	LDL 2
-	LT
-	BRT -21
-	LDL 3
 	TRAP 0
 	UNLINK
 	RET
-square:
+fac:
 	LINK 0
 	LDL -2
-	LDL -2
-	MUL
+	LDC 1
+	EQ
+	BRF 6
+	LDC 1
 	STR R4
-	UNLINK
-	RET
-cube:
-	LINK 0
+	BRA 16
 	LDL -2
 	LDL -2
-	MUL
-	LDL -2
+	LDC 1
+	SUB
+	Bsr fac
+	AJS -1
+	LDR R4
 	MUL
 	STR R4
 	UNLINK
