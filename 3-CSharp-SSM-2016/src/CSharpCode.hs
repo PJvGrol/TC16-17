@@ -17,7 +17,7 @@ type Env = M.Map Token (Loc, Int)--[(Token,(Loc,Int))]
 data Loc = Mem | Lcl | Param
         deriving Eq
     
-codeAlgebra :: CSharpAlgebra Code Code (Env -> Env -> (Env, Code)) (Env -> ValueOrAddress -> Code)
+codeAlgebra :: CSharpAlgebra (Env -> Code) (Env -> Env -> (Env,Code)) (Env -> Env -> (Env, Code)) (Env -> ValueOrAddress -> Code)
 codeAlgebra =
     ( fClas
     , (fMembDecl, fMembMeth)
@@ -25,17 +25,21 @@ codeAlgebra =
     , (fExprCon, fExprVar, fExprOp, fMethCall)
     )
 
-fClas :: Token -> [Code] -> Code
-fClas c ms = [Bsr "main", HALT] ++ concat ms
+fClas :: Token -> [Env -> Env -> (Env,Code)] -> Env -> Code
+fClas c ms menv = [LDR SP, STR R5, AJS (nrOfLoc Mem menv2), Bsr "main", HALT] ++ (concat.map snd) (f ms menv menv2)
+                      where f xs p1 p2 = map (\x -> x p1 p2) xs
+                            --(envs, codes) = unzip (f ms menv menv2)
+                            --menv2 = combine envs
+                            menv2 = combineMem (map fst (f ms menv menv2))
 
-fMembDecl :: Decl -> Code
-fMembDecl d = []
+fMembDecl :: Decl -> Env -> Env -> (Env,Code)
+fMembDecl (Decl t tk) menv menv2 = (M.insert tk (Mem, nrOfLoc Mem menv + 1) menv,[])
 
-fMembMeth :: Type -> Token -> [Decl] -> (Env -> Env -> (Env, Code)) -> Code
-fMembMeth t (LowerId x) ps s = [LABEL x, LINK (length env2 - length ps)] ++ snd(s env env2) ++ [UNLINK, RET] 
+fMembMeth :: Type -> Token -> [Decl] -> (Env -> Env -> (Env, Code)) -> Env -> Env -> (Env,Code)
+fMembMeth t (LowerId x) ps s menv menv2 = (menv, [LABEL x, LINK (length env2 - length ps - nrOfLoc Mem env2)] ++ snd(s env env2) ++ [UNLINK, RET])
                              where {-f ps = Prelude.foldr op [] ps
                                    op (Decl tp tk) xs = fExprCon (ConstInt 3) env Value ++ xs-}
-                                   env = foldr op2 M.empty ps
+                                   env = foldr op2 menv2 ps
                                    op2 (Decl tp tk) mp = M.insert tk (Param,(-1)*(M.size mp)-2) mp
                                    (env2,code) = s env env2
 
@@ -87,8 +91,16 @@ combine (env:env2:xs) = combine ((M.union env env3): xs)
                           add = nrOfLoc Lcl env
                           accum :: Int -> (Loc, Int) -> (Int, (Loc,Int))
                           accum a (loc,b) | loc == Lcl = (a,(loc,b+a))
-                                          | loc == Param = (a-1,(loc,b))
+                                          | otherwise  = (a-1,(loc,b))
 
+combineMem :: [Env] -> Env
+combineMem [env] = env
+combineMem (env:env2:xs) = combine ((M.union env env3): xs)
+                      where env3 = snd (M.mapAccum accum add env2)
+                            add = nrOfLoc Lcl env
+                            accum :: Int -> (Loc, Int) -> (Int, (Loc,Int))
+                            accum a (loc,b) | loc == Mem = (a,(loc,b+a))
+                                            | otherwise = (a-1,(loc,b))
                   --combine xs = snd ( M.mapAccum accum 0 (M.unions xs))                  
                   {-
 

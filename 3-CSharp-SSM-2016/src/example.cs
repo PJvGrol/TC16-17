@@ -7,6 +7,7 @@ class Hello
     {
         bool b;
         int c;
+        g=4;
         b=4;
         c=5;
         square(3);

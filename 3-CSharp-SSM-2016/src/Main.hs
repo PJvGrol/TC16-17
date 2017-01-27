@@ -12,6 +12,7 @@ import CSharpAlgebra
 import SSM
 import CSharpCode
 import Prelude hiding ((<*))
+import qualified Data.Map as M
 
 start :: Parser s a -> [s] -> a
 start p = fst . head . filter (null . snd) . parse p
@@ -38,6 +39,6 @@ processFile (infile, outfile) =
     writeFile outfile (process xs)
     putStrLn (outfile ++ " written")
   where process = formatCode
-                . foldCSharp codeAlgebra
+                . (\x -> (foldCSharp codeAlgebra x) M.empty)
                 . start (pClass <* eof)
                 . start lexicalScanner
