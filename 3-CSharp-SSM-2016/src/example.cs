@@ -1,16 +1,19 @@
 class Hello
 {
-    int g;
     int a;
-    
+    int b;
+    int c;
+    int d;
     void main()
     {
         //a=3;
-        int b;
-        int c;
-        g=4;
+        char g;
+        g='asd';
+        print(3*4);
+        a=5;
         b=4;
-        c=5;
+        c=6;
+        d=7;
         //c++;
     }
     

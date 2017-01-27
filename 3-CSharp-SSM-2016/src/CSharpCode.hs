@@ -30,10 +30,11 @@ fClas c ms menv = [LDR SP, STR R5, AJS (nrOfLoc Mem menv2), Bsr "main", HALT] ++
                       where f xs p1 p2 = map (\x -> x p1 p2) xs
                             --(envs, codes) = unzip (f ms menv menv2)
                             --menv2 = combine envs
-                            menv2 = combineMem (map fst (f ms menv menv2))
+                            menv2 = (combineMem.fst) (unzip (f ms menv menv2))
+                            --menv2 = combineMem (map fst (f ms menv menv2))
 
 fMembDecl :: Decl -> Env -> Env -> (Env,Code)
-fMembDecl (Decl t tk) menv menv2 = (M.insert tk (Mem, nrOfLoc Mem menv + 1) menv,[])
+fMembDecl (Decl t tk) menv menv2 = (M.insert tk (Mem, M.size menv + 1) menv,[])
 
 fMembMeth :: Type -> Token -> [Decl] -> (Env -> Env -> (Env, Code)) -> Env -> Env -> (Env,Code)
 fMembMeth t (LowerId x) ps s menv menv2 = (menv, [LABEL x, LINK (length env2 - length ps - nrOfLoc Mem env2)] ++ snd(s env env2) ++ [UNLINK, RET])
@@ -95,12 +96,12 @@ combine (env:env2:xs) = combine ((M.union env env3): xs)
 
 combineMem :: [Env] -> Env
 combineMem [env] = env
-combineMem (env:env2:xs) = combine ((M.union env env3): xs)
+combineMem (env:env2:xs) = combineMem ((M.union env env3): xs)
                       where env3 = snd (M.mapAccum accum add env2)
-                            add = nrOfLoc Lcl env
+                            add = M.size env
                             accum :: Int -> (Loc, Int) -> (Int, (Loc,Int))
                             accum a (loc,b) | loc == Mem = (a,(loc,b+a))
-                                            | otherwise = (a-1,(loc,b))
+                                            | otherwise = (a,(loc,b+10))
                   --combine xs = snd ( M.mapAccum accum 0 (M.unions xs))                  
                   {-
 
@@ -122,10 +123,10 @@ fExprCon (LowerId c) env va = [LDC (ord (head c))]
 fExprVar :: Token -> Env -> ValueOrAddress -> Code
 fExprVar t env va = case va of
                         Value ->   case y of
-                                   Mem -> [LDR R5] ++ [LDA z] 
+                                   Mem -> [LDR R5, LDA z] 
                                    otherwise -> [LDL z]
                         Address -> case y of
-                                   Mem -> [LDR R5] ++ [LDAA z]
+                                   Mem -> [LDR R5, STA z]
                                    otherwise -> [STL z]
                     where
                     x = env M.! t
