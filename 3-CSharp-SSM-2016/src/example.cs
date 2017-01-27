@@ -7,6 +7,7 @@ class Hello
         b = 12;
         int c;
         c = 0;
+        c = square(3);
         for(a=1; a < b; a++){
             c += a;
         }

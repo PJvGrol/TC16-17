@@ -31,11 +31,16 @@ codeAlgebra =
     , (fExprCon, fExprVar, fExprOp, fMethCall)
     )
 
---     
+-- We generate the environment for global variables and make room on the stack, we load the current SP to a register
+-- that we use as sort of MP
 fClas :: Token -> [Env -> Env -> (Env,Code)] -> Code
-fClas c ms = [LDR SP, STR R5, AJS (nrOfLoc Mem menv2), Bsr "main", HALT] ++ (concat.map snd) (f ms M.empty menv2)
-                      where f xs p1 p2 = map (\x -> x p1 p2) xs
-                            menv2 = (combineMem.fst.unzip) (f ms M.empty M.empty)
+fClas c ms = [LDR SP, STR R5, AJS (nrOfLoc Mem menv2), Bsr "main", HALT] ++ (concat.map snd) (merge ms M.empty menv2)
+                      where menv2 = (combineMem.fst.unzip) (merge ms M.empty M.empty)
+
+-- A helper function that gives al the functions in a list the same parameter
+merge :: [Env -> Env -> (Env,Code)] -> Env -> Env -> [(Env,Code)]
+merge xs env env2 = Prelude.foldr op [] xs
+            where op a b = a env env2: b
 
 -- We add the global variable to the global environment
 fMembDecl :: Decl -> Env -> Env -> (Env,Code)
@@ -66,7 +71,7 @@ fStatFor e1 e2 e3 s1 env1 env2 = (combine [env1, env3], asm ++ [BRA (szbody + sz
                                (env3, body) = s1 env1 env2
                                (szbody, szcond, szinc) = (codeSize body, codeSize cond, codeSize inc)
 
--- Here we gene                               
+-- We assign values to parameters                   
 fStatExpr :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
 fStatExpr exp env env2 = (env, exp env2 Value)
  
@@ -91,13 +96,17 @@ fStatWhile e s1 env env2 = (combine [env,env3], [BRA n] ++ d ++ c ++ [BRT (-(n +
 fStatReturn :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
 fStatReturn e env env2 = (env, e env2 Value ++ [STR R4])
 
+-- Printing a value is pretty straight forward
 fPrint :: (Env -> ValueOrAddress -> Code) -> Env -> Env -> (Env,Code)
 fPrint e env env2 = (env, e env2 Value ++ [TRAP 0])
 
+-- We combine the environments and the code in one tuple
 fStatBlock :: [Env -> Env -> (Env,Code)] -> Env -> Env -> (Env,Code)
 fStatBlock xs env env2 = (combine(map fst ys), concat(map snd ys))
-                       where ys = temp xs env env2
+                       where ys = merge xs env env2
 
+-- When combining two environments, we need to update the second, because two environments can have keys with the same value
+-- Therefore we have a function that combines them
 combine :: [Env] -> Env
 combine [env] = env
 combine (env:env2:xs) = combine ((M.union env env3): xs)
@@ -107,18 +116,16 @@ combine (env:env2:xs) = combine ((M.union env env3): xs)
                           accum a (loc,b) | loc == Lcl = (a,(loc,b+a))
                                           | otherwise  = (a-1,(loc,b))
 
+-- Combining global variables works a little different
 combineMem :: [Env] -> Env
 combineMem [env] = env
 combineMem (env:env2:xs) = combineMem ((M.union env env3): xs)
                       where env3 = snd (M.mapAccum accum add env2)
                             add = M.size env
                             accum :: Int -> (Loc, Int) -> (Int, (Loc,Int))
-                            accum a (loc,b) | loc == Mem = (a,(loc,b+a))
-                                            | otherwise = (a,(loc,b+10))
+                            accum a (loc,b) = (a,(loc,b+a))
                        
-temp :: [Env -> Env -> (Env,Code)] -> Env -> Env -> [(Env,Code)]
-temp xs env env2 = Prelude.foldr op [] xs
-            where op a b = a env env2: b
+
 
 -- True is saved as 1, False as 0. Char saved as ASCII value, int saved as itself.
 fExprCon :: Token -> Env -> ValueOrAddress -> Code
@@ -155,6 +162,8 @@ fExprOp (Operator "*=") e1 e2 env va = e1 env Value ++ e2 env Value ++ [MUL] ++ 
 fExprOp (Operator "/=") e1 e2 env va = e1 env Value ++ e2 env Value ++ [DIV] ++ e1 env Address
 fExprOp (Operator op)  e1 e2 env va = e1 env Value ++ e2 env Value ++ [opCodes M.! op]
 
+-- First we load the local variables, then we branch to the method and after that we remove the parameters from the stack
+-- and we load the return value of the method
 fMethCall :: Token -> [Env -> ValueOrAddress -> Code] -> Env -> ValueOrAddress -> Code
 fMethCall (LowerId x) xs env va = Prelude.foldr op [Bsr x, AJS (-(length xs)), LDR R4] xs
                                 where op f c = f env Value ++ c
