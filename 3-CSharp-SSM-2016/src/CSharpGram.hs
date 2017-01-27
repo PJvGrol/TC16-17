@@ -48,18 +48,25 @@ pExprSimple =  ExprConst <$> sConst
            <|> ExprVar   <$> sLowerId
            <|> parenthesised (pExpr 0)
            <|> pMethCall
+           <|> (\x _ -> ExprOper (Operator "+=") x (ExprConst (ConstInt 1))) <$> (ExprVar <$> sLowerId) <*> (symbol (Operator "++"))
+           <|> (\x _ -> ExprOper (Operator "-=") x (ExprConst (ConstInt 1))) <$> (ExprVar <$> sLowerId) <*> (symbol (Operator "--"))
            <|> ExprConst <$> sBool
            <|> ExprConst <$ symbol Apostrof <*> sChar <* symbol Apostrof
-
+           
 pExpr :: Int -> Parser Token Expr
-pExpr n | n <= 8 = chainl (pExpr (n+1)) (ExprOper <$> (pOperator n))
+pExpr n | n <= 7 = chainl (pExpr (n+1)) (ExprOper <$> (pOperator n))
         | otherwise = pExprSimple
 
 pOperator :: Int -> Parser Token Token
-pOperator n = satisfy f
+pOperator n = change <$> satisfy f
             where f (Operator x) = expPrior2 x >= n
                   f x = False
 
+change :: Token -> Token
+change (Operator "++") = Operator "+="
+change (Operator "--") = Operator "-="
+change x = x
+                  
 expPrior2 :: String -> Int
 expPrior2  op | elem op["=", "+=", "-=", "*=", "/="] = 0
               | op == "||" = 1

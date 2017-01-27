@@ -11,7 +11,9 @@ class Hello
         g=4;
         b=4;
         c=5;
-        //c++;
+        b = 8 + (c--);
+        for (c; c<b;c++)
+            ;
     }
     
     int square( int x)
